@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>每日习惯追踪器</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+      background: #f0f2f7;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 0 60px;
+      color: #2d2d2d;
+    }
+
+    .container { width: 100%; max-width: 480px; padding: 0 16px; }
+
+    /* ── Tab 导航 ── */
+    .tab-bar {
+      display: flex;
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      width: 100%;
+      max-width: 480px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 16px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #aaa;
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      font-family: inherit;
+    }
+    .tab-btn.active { color: #6C63FF; border-bottom-color: #6C63FF; }
+
+    /* ── 页面 ── */
+    .page { display: none; padding-top: 24px; }
+    .page.active { display: block; }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { font-size: 20px; font-weight: 700; color: #6C63FF; letter-spacing: 1px; }
+    .header .date { font-size: 13px; color: #888; margin-top: 4px; }
+
+    /* ── 进度卡片 ── */
+    .progress-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(108,99,255,0.08);
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .progress-label span:last-child { font-weight: 600; color: #6C63FF; }
+    .progress-bar-bg { background: #eee; border-radius: 999px; height: 10px; overflow: hidden; }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #6C63FF, #a78bfa);
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    /* ── 习惯列表 ── */
+    .habit-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+    .habit-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .habit-card:hover { box-shadow: 0 4px 16px rgba(108,99,255,0.12); }
+
+    .habit-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+    }
+
+    .habit-check {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      border: 2px solid #ddd;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      background: #fff;
+    }
+    .habit-check:hover { border-color: #6C63FF; }
+    .habit-card.done .habit-check { background: #6C63FF; border-color: #6C63FF; }
+    .check-icon { display: none; color: #fff; font-size: 13px; font-weight: bold; }
+    .habit-card.done .check-icon { display: block; }
+
+    .habit-name {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .habit-card.done .habit-name { text-decoration: line-through; color: #aaa; }
+
+    .habit-streak {
+      font-size: 12px; color: #f97316; font-weight: 600;
+      white-space: nowrap; flex-shrink: 0;
+    }
+
+    .habit-note-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 15px; padding: 2px 4px; border-radius: 6px;
+      transition: background 0.2s; flex-shrink: 0; line-height: 1;
+      position: relative;
+    }
+    .habit-note-btn:hover { background: #f0eeff; }
+    .habit-note-btn .note-dot {
+      position: absolute; top: 0; right: 0;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #6C63FF; display: none;
+    }
+    .habit-note-btn.has-note .note-dot { display: block; }
+
+    .habit-delete {
+      background: none; border: none; cursor: pointer;
+      color: #ccc; font-size: 18px; line-height: 1;
+      padding: 2px 4px; border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+      opacity: 0; flex-shrink: 0;
+    }
+    .habit-card:hover .habit-delete { opacity: 1; }
+    .habit-delete:hover { color: #ef4444; background: #fee2e2; }
+
+    /* 备忘展开区 */
+    .habit-note-area {
+      display: none;
+      padding: 0 16px 12px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .habit-note-area.open { display: block; }
+    .note-label {
+      font-size: 12px; color: #aaa; margin-bottom: 6px; margin-top: 10px;
+    }
+    .note-textarea {
+      width: 100%;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 72px;
+      outline: none;
+      transition: border-color 0.2s;
+      color: #333;
+    }
+    .note-textarea:focus { border-color: #6C63FF; }
+    .note-save-btn {
+      margin-top: 8px;
+      background: #6C63FF; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 7px 16px; font-size: 13px;
+      font-weight: 600; cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    .note-save-btn:hover { background: #5a52e0; }
+
+    /* ── 空状态 ── */
+    .empty-state {
+      text-align: center; padding: 36px 20px;
+      color: #bbb; font-size: 15px;
+      background: #fff; border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 14px;
+    }
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+    /* ── 添加习惯 ── */
+    .add-area {
+      background: #fff; border-radius: 14px;
+      padding: 13px 14px; display: flex; gap: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .add-input {
+      flex: 1; border: 1.5px solid #e5e7eb; border-radius: 10px;
+      padding: 10px 14px; font-size: 14px; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    .add-input:focus { border-color: #6C63FF; }
+    .add-btn {
+      background: #6C63FF; color: #fff; border: none;
+      border-radius: 10px; padding: 10px 16px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: inherit; white-space: nowrap;
+    }
+    .add-btn:hover { background: #5a52e0; }
+    .add-btn:active { transform: scale(0.96); }
+
+    /* ── 全部完成横幅 ── */
+    .all-done-banner {
+      display: none;
+      background: linear-gradient(135deg, #6C63FF, #a78bfa);
+      color: #fff; text-align: center; border-radius: 14px;
+      padding: 14px; font-size: 15px; font-weight: 600;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 16px rgba(108,99,255,0.3);
+      animation: slideDown 0.4s ease;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(-10px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+
+    /* ── 我的页面 ── */
+    .my-header { margin-bottom: 20px; }
+    .my-header h2 { font-size: 18px; font-weight: 700; color: #2d2d2d; }
+    .my-header p { font-size: 13px; color: #aaa; margin-top: 3px; }
+
+    /* 统计卡片 */
+    .stats-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    .stat-card {
+      flex: 1; background: #fff; border-radius: 14px;
+      padding: 16px 12px; text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .stat-value { font-size: 26px; font-weight: 700; color: #6C63FF; }
+    .stat-label { font-size: 12px; color: #aaa; margin-top: 4px; }
+
+    /* 日历热图 */
+    .calendar-card {
+      background: #fff; border-radius: 16px;
+      padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(108,99,255,0.08);
+    }
+    .calendar-title {
+      font-size: 15px; font-weight: 600; color: #2d2d2d;
+      margin-bottom: 14px;
+    }
+    .calendar-month-label {
+      font-size: 12px; color: #aaa; margin-bottom: 6px; font-weight: 600;
+    }
+    .calendar-grid {
+      display: flex; flex-wrap: wrap; gap: 4px;
+    }
+    .cal-week { display: flex; flex-direction: column; gap: 4px; }
+    .cal-day {
+      width: 14px; height: 14px; border-radius: 3px;
+      cursor: pointer; transition: transform 0.1s;
+      background: #f0f0f0;
+    }
+    .cal-day:hover { transform: scale(1.3); }
+    .cal-day.rate-low    { background: #c4b5fd; }
+    .cal-day.rate-mid    { background: #8b5cf6; }
+    .cal-day.rate-full   { background: #6C63FF; }
+    .cal-day.today-cell  { outline: 2px solid #f97316; outline-offset: 1px; }
+
+    .cal-legend {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: #aaa; margin-top: 10px;
+      justify-content: flex-end;
+    }
+    .cal-legend-box {
+      width: 12px; height: 12px; border-radius: 3px;
+    }
+
+    /* 日详情弹窗 */
+    .day-detail-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35); z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+    .day-detail-overlay.open { display: flex; }
+    .day-detail-panel {
+      background: #fff; border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 480px;
+      padding: 24px 20px 36px;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+    .day-detail-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .day-detail-title { font-size: 16px; font-weight: 700; }
+    .day-detail-close {
+      background: #f3f4f6; border: none; border-radius: 50%;
+      width: 30px; height: 30px; cursor: pointer;
+      font-size: 16px; line-height: 30px; text-align: center;
+    }
+    .day-detail-item {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+    }
+    .day-detail-item:last-child { border-bottom: none; }
+    .day-detail-row { display: flex; align-items: center; gap: 10px; }
+    .day-detail-check { font-size: 16px; }
+    .day-detail-name { font-size: 14px; font-weight: 500; }
+    .day-detail-note { font-size: 13px; color: #888; padding-left: 26px; }
+
+    /* ── 撒花 ── */
+    .confetti-wrapper {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; overflow: hidden; z-index: 9999;
+    }
+    .confetti-piece {
+      position: absolute; top: -12px;
+      animation: confetti-fall linear forwards;
+    }
+    @keyframes confetti-fall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      90%  { opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Tab 导航 -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="today">今日</button>
+  <button class="tab-btn" data-tab="mine">我的</button>
+</div>
+
+<!-- ══ 今日 页面 ══ -->
+<div class="container">
+  <div class="page active" id="page-today">
+    <div class="header">
+      <h1>每日习惯追踪器</h1>
+      <div class="date" id="today-date"></div>
+    </div>
+
+    <div class="progress-card" id="progress-card" style="display:none">
+      <div class="progress-label">
+        <span>今日进度</span>
+        <span id="progress-text">0 / 0</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
+    </div>
+
+    <div class="all-done-banner" id="all-done-banner">
+      🎉 太棒了！今天的习惯全部完成！
+    </div>
+
+    <div id="habit-list" class="habit-list"></div>
+
+    <div class="add-area">
+      <input class="add-input" id="habit-input" type="text" placeholder="输入新习惯，如：健身30分钟" maxlength="40" />
+      <button class="add-btn" id="add-btn">+ 添加</button>
+    </div>
+  </div>
+
+  <!-- ══ 我的 页面 ══ -->
+  <div class="page" id="page-mine">
+    <div class="my-header">
+      <h2>我的习惯记录</h2>
+      <p>查看打卡历史与每日备忘</p>
+    </div>
+
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="calendar-card">
+      <div class="calendar-title">打卡热图 · 最近 90 天</div>
+      <div id="calendar-container"></div>
+      <div class="cal-legend">
+        <span>少</span>
+        <div class="cal-legend-box" style="background:#f0f0f0"></div>
+        <div class="cal-legend-box" style="background:#c4b5fd"></div>
+        <div class="cal-legend-box" style="background:#8b5cf6"></div>
+        <div class="cal-legend-box" style="background:#6C63FF"></div>
+        <span>多</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 日详情弹窗 -->
+<div class="day-detail-overlay" id="day-detail-overlay">
+  <div class="day-detail-panel">
+    <div class="day-detail-header">
+      <div class="day-detail-title" id="day-detail-title"></div>
+      <button class="day-detail-close" id="day-detail-close">✕</button>
+    </div>
+    <div id="day-detail-body"></div>
+  </div>
+</div>
+
+<div class="confetti-wrapper" id="confetti-wrapper"></div>
+
+<script>
+  const STORAGE_KEY = 'habit_tracker_v1';
+
+  // ── 工具函数 ────────────────────────────────────────────
+  function dateStr(d) {
+    d = d || new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function todayStr()     { return dateStr(); }
+  function yesterdayStr() { const d = new Date(); d.setDate(d.getDate()-1); return dateStr(d); }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── 数据层 ──────────────────────────────────────────────
+  function loadData() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+  }
+  function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+
+  function initData() {
+    const raw = loadData();
+    return {
+      habits:    raw.habits    || [],
+      records:   raw.records   || {},   // records[date][id] = true | false
+      notes:     raw.notes     || {},   // notes[date][id]   = "text"
+      lastVisit: raw.lastVisit || todayStr()
+    };
+  }
+
+  // ── 每日重置 ────────────────────────────────────────────
+  function checkDayReset(data) {
+    const today = todayStr();
+    if (data.lastVisit === today) return data;
+
+    const ydayRec = data.records[yesterdayStr()] || {};
+    data.habits = data.habits.map(h => ({
+      ...h,
+      streak: ydayRec[h.id] ? (h.streak || 0) + 1 : 0
+    }));
+
+    // 保留最近 90 天
+    const keys = Object.keys(data.records).sort();
+    while (keys.length > 90) {
+      const k = keys.shift();
+      delete data.records[k];
+      delete data.notes[k];
+    }
+
+    data.lastVisit = today;
+    if (!data.records[today]) data.records[today] = {};
+    saveData(data);
+    return data;
+  }
+
+  // ── 全局状态 ────────────────────────────────────────────
+  let appData = checkDayReset(initData());
+
+  function getTodayRecord() { return appData.records[todayStr()] || {}; }
+  function getTodayNotes()  { return appData.notes[todayStr()]   || {}; }
+
+  // ── 渲染：今日日期 ──────────────────────────────────────
+  function renderDate() {
+    const d = new Date();
+    const days = ['日','一','二','三','四','五','六'];
+    document.getElementById('today-date').textContent =
+      `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 星期${days[d.getDay()]}`;
+  }
+
+  // ── 渲染：进度条 ─────────────────────────────────────────
+  function renderProgress() {
+    const card  = document.getElementById('progress-card');
+    const total = appData.habits.length;
+    if (total === 0) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    const rec  = getTodayRecord();
+    const done = appData.habits.filter(h => rec[h.id]).length;
+    document.getElementById('progress-text').textContent = `${done} / ${total}`;
+    document.getElementById('progress-bar').style.width = `${Math.round(done/total*100)}%`;
+  }
+
+  // ── 渲染：习惯列表 ──────────────────────────────────────
+  function renderHabits() {
+    const list = document.getElementById('habit-list');
+    list.innerHTML = '';
+
+    if (appData.habits.length === 0) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">🌱</div>
+        还没有习惯，添加第一个吧 👇
+      </div>`;
+      return;
+    }
+
+    const rec   = getTodayRecord();
+    const notes = getTodayNotes();
+
+    appData.habits.forEach(h => {
+      const done    = !!rec[h.id];
+      const note    = notes[h.id] || '';
+      const hasNote = note.length > 0;
+
+      const card = document.createElement('div');
+      card.className = 'habit-card' + (done ? ' done' : '');
+      card.dataset.id = h.id;
+
+      card.innerHTML = `
+        <div class="habit-row">
+          <div class="habit-check" data-action="check" data-id="${h.id}">
+            <span class="check-icon">✓</span>
+          </div>
+          <span class="habit-name">${escapeHtml(h.name)}</span>
+          ${h.streak > 0 ? `<span class="habit-streak">🔥${h.streak}天</span>` : ''}
+          <button class="habit-note-btn${hasNote ? ' has-note' : ''}" data-action="note" data-id="${h.id}" title="记录今日备忘">
+            ✏️
+            <span class="note-dot"></span>
+          </button>
+          <button class="habit-delete" data-action="delete" data-id="${h.id}" title="删除">×</button>
+        </div>
+        <div class="habit-note-area" data-note-area="${h.id}">
+          <div class="note-label">今日备忘（打卡完成了什么？）</div>
+          <textarea class="note-textarea" data-note-input="${h.id}" placeholder="例：学习了 Claude Academy 的 AI Fluency 课程，完成了第3章...">${escapeHtml(note)}</textarea>
+          <button class="note-save-btn" data-action="save-note" data-id="${h.id}">保存备忘</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  // ── 渲染：全部完成 ──────────────────────────────────────
+  function checkAllDone() {
+    const banner = document.getElementById('all-done-banner');
+    const total  = appData.habits.length;
+    if (total === 0) { banner.style.display = 'none'; return; }
+    const rec  = getTodayRecord();
+    const done = appData.habits.filter(h => rec[h.id]).length;
+    if (done === total) {
+      if (banner.style.display !== 'block') {
+        banner.style.display = 'block';
+        fireConfetti();
+      }
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  function render() {
+    renderDate();
+    renderProgress();
+    renderHabits();
+    checkAllDone();
+  }
+
+  // ── 渲染：我的页面 ──────────────────────────────────────
+  function renderMine() {
+    renderStats();
+    renderCalendar();
+  }
+
+  function renderStats() {
+    const container = document.getElementById('stats-row');
+    const total = appData.habits.length;
+    const bestStreak = appData.habits.reduce((m, h) => Math.max(m, h.streak || 0), 0);
+    const days = Object.keys(appData.records).length;
+    container.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-value">${total}</div>
+        <div class="stat-label">习惯数量</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${bestStreak}</div>
+        <div class="stat-label">最长连续天</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${days}</div>
+        <div class="stat-label">有记录天数</div>
+      </div>
+    `;
+  }
+
+  function renderCalendar() {
+    const container = document.getElementById('calendar-container');
+    container.innerHTML = '';
+
+    const today    = new Date();
+    const todayKey = dateStr(today);
+    const total    = appData.habits.length;
+
+    // 从 90 天前的周日开始
+    const start = new Date(today);
+    start.setDate(start.getDate() - 89);
+    // 往前移到周日
+    start.setDate(start.getDate() - start.getDay());
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:flex;gap:4px;';
+
+    let cur = new Date(start);
+    while (cur <= today) {
+      const week = document.createElement('div');
+      week.className = 'cal-week';
+
+      for (let i = 0; i < 7; i++) {
+        const key = dateStr(cur);
+        const cell = document.createElement('div');
+        cell.className = 'cal-day';
+        cell.dataset.date = key;
+        cell.title = key;
+
+        if (cur <= today) {
+          const rec  = appData.records[key] || {};
+          const done = Object.keys(rec).filter(k => rec[k]).length;
+          if (total > 0 && done > 0) {
+            const rate = done / total;
+            if (rate >= 1)       cell.classList.add('rate-full');
+            else if (rate >= 0.5) cell.classList.add('rate-mid');
+            else                  cell.classList.add('rate-low');
+          }
+        } else {
+          cell.style.opacity = '0';
+          cell.style.pointerEvents = 'none';
+        }
+
+        if (key === todayKey) cell.classList.add('today-cell');
+
+        week.appendChild(cell);
+        cur.setDate(cur.getDate() + 1);
+      }
+      grid.appendChild(week);
+    }
+    container.appendChild(grid);
+  }
+
+  // ── 日详情弹窗 ──────────────────────────────────────────
+  function openDayDetail(dateKey) {
+    const rec   = appData.records[dateKey] || {};
+    const notes = appData.notes[dateKey]   || {};
+
+    const d = new Date(dateKey + 'T00:00:00');
+    const days = ['日','一','二','三','四','五','六'];
+    document.getElementById('day-detail-title').textContent =
+      `${d.getMonth()+1}月${d.getDate()}日 星期${days[d.getDay()]}`;
+
+    const body = document.getElementById('day-detail-body');
+    if (appData.habits.length === 0) {
+      body.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px 0">暂无习惯数据</div>';
+    } else {
+      body.innerHTML = appData.habits.map(h => {
+        const done = !!rec[h.id];
+        const note = notes[h.id] || '';
+        return `<div class="day-detail-item">
+          <div class="day-detail-row">
+            <span class="day-detail-check">${done ? '✅' : '⬜'}</span>
+            <span class="day-detail-name">${escapeHtml(h.name)}</span>
+          </div>
+          ${note ? `<div class="day-detail-note">📝 ${escapeHtml(note)}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('day-detail-overlay').classList.add('open');
+  }
+
+  // ── 事件：习惯操作 ──────────────────────────────────────
+  function toggleHabit(id) {
+    const today = todayStr();
+    if (!appData.records[today]) appData.records[today] = {};
+    appData.records[today][id] = !appData.records[today][id];
+    if (!appData.records[today][id]) delete appData.records[today][id];
+    saveData(appData);
+    render();
+  }
+
+  function addHabit(name) {
+    name = name.trim();
+    if (!name) return;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    appData.habits.push({ id, name, streak: 0 });
+    saveData(appData);
+    render();
+  }
+
+  function deleteHabit(id) {
+    appData.habits = appData.habits.filter(h => h.id !== id);
+    Object.values(appData.records).forEach(r => delete r[id]);
+    Object.values(appData.notes).forEach(r => delete r[id]);
+    saveData(appData);
+    render();
+  }
+
+  function saveNote(id) {
+    const today  = todayStr();
+    const ta     = document.querySelector(`[data-note-input="${id}"]`);
+    if (!ta) return;
+    const text = ta.value.trim();
+    if (!appData.notes[today]) appData.notes[today] = {};
+    if (text) appData.notes[today][id] = text;
+    else delete appData.notes[today][id];
+    saveData(appData);
+    render();
+  }
+
+  function toggleNoteArea(id) {
+    const area = document.querySelector(`[data-note-area="${id}"]`);
+    if (area) area.classList.toggle('open');
+  }
+
+  // ── 事件委托：习惯列表 ──────────────────────────────────
+  document.getElementById('habit-list').addEventListener('click', e => {
+    const el  = e.target.closest('[data-action]');
+    if (!el) return;
+    const { action, id } = el.dataset;
+    if (action === 'check')     toggleHabit(id);
+    else if (action === 'delete')    deleteHabit(id);
+    else if (action === 'note')      toggleNoteArea(id);
+    else if (action === 'save-note') saveNote(id);
+  });
+
+  // ── 事件：添加习惯 ──────────────────────────────────────
+  document.getElementById('add-btn').addEventListener('click', () => {
+    const inp = document.getElementById('habit-input');
+    addHabit(inp.value);
+    inp.value = '';
+    inp.focus();
+  });
+  document.getElementById('habit-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      addHabit(e.target.value);
+      e.target.value = '';
+    }
+  });
+
+  // ── 事件：Tab 切换 ──────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('page-today').classList.toggle('active', tab === 'today');
+      document.getElementById('page-mine').classList.toggle('active', tab === 'mine');
+      if (tab === 'mine') renderMine();
+    });
+  });
+
+  // ── 事件：日历点击 ──────────────────────────────────────
+  document.getElementById('calendar-container').addEventListener('click', e => {
+    const cell = e.target.closest('.cal-day');
+    if (cell && cell.dataset.date) openDayDetail(cell.dataset.date);
+  });
+
+  // ── 事件：关闭弹窗 ──────────────────────────────────────
+  document.getElementById('day-detail-close').addEventListener('click', () => {
+    document.getElementById('day-detail-overlay').classList.remove('open');
+  });
+  document.getElementById('day-detail-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget)
+      document.getElementById('day-detail-overlay').classList.remove('open');
+  });
+
+  // ── 撒花 ─────────────────────────────────────────────────
+  function fireConfetti() {
+    const wrapper = document.getElementById('confetti-wrapper');
+    wrapper.innerHTML = '';
+    const colors = ['#6C63FF','#a78bfa','#f97316','#22c55e','#facc15','#ec4899'];
+    for (let i = 0; i < 60; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      const size = (8 + Math.random() * 6) + 'px';
+      el.style.width = size; el.style.height = size;
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      const dur = 1.5 + Math.random() * 1.5;
+      el.style.animationDuration = dur + 's';
+      el.style.animationDelay = Math.random() * 0.6 + 's';
+      wrapper.appendChild(el);
+    }
+    setTimeout(() => { wrapper.innerHTML = ''; }, 3500);
+  }
+
+  // ── 初始化 ───────────────────────────────────────────────
+  render();
+</script>
+</body>
+</html>
