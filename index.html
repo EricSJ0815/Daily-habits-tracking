@@ -5,411 +5,560 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>每日习惯追踪器</title>
   <style>
+    /* ── CSS Variables ── */
+    :root {
+      --bg: #f0f2f7; --card: #fff; --text: #1f2937; --sub: #6b7280;
+      --border: #e5e7eb; --primary: #6C63FF; --primary-light: #e9e4ff;
+      --primary-hover: #5a52e0; --streak-color: #f97316; --done-text: #aaa;
+      --tab-bar: #fff; --tab-border: #eee; --shadow: rgba(108,99,255,.08);
+      --shadow-sm: rgba(0,0,0,.05); --rate-low: #c4b5fd; --rate-mid: #8b5cf6;
+      --cal-empty: #f0f0f0; --input-bg: #fff; --red: #ef4444;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg:#0f0f13; --card:#1a1a24; --text:#f0f0f0; --sub:#8888aa;
+        --border:#2d2d40; --primary:#8b7fff; --primary-light:#2d2650;
+        --primary-hover:#7a6fee; --streak-color:#fb923c; --done-text:#555;
+        --tab-bar:#1a1a24; --tab-border:#2d2d40; --shadow:rgba(0,0,0,.3);
+        --shadow-sm:rgba(0,0,0,.2); --rate-low:#4c3a8c; --rate-mid:#6d4fc7;
+        --cal-empty:#2a2a35; --input-bg:#1a1a24;
+      }
+    }
+    [data-theme="dark"] {
+      --bg:#0f0f13; --card:#1a1a24; --text:#f0f0f0; --sub:#8888aa;
+      --border:#2d2d40; --primary:#8b7fff; --primary-light:#2d2650;
+      --primary-hover:#7a6fee; --streak-color:#fb923c; --done-text:#555;
+      --tab-bar:#1a1a24; --tab-border:#2d2d40; --shadow:rgba(0,0,0,.3);
+      --shadow-sm:rgba(0,0,0,.2); --rate-low:#4c3a8c; --rate-mid:#6d4fc7;
+      --cal-empty:#2a2a35; --input-bg:#1a1a24;
+    }
+    [data-theme="light"] {
+      --bg:#f0f2f7; --card:#fff; --text:#1f2937; --sub:#6b7280;
+      --border:#e5e7eb; --primary:#6C63FF; --primary-light:#e9e4ff;
+      --primary-hover:#5a52e0; --streak-color:#f97316; --done-text:#aaa;
+      --tab-bar:#fff; --tab-border:#eee; --shadow:rgba(108,99,255,.08);
+      --shadow-sm:rgba(0,0,0,.05); --rate-low:#c4b5fd; --rate-mid:#8b5cf6;
+      --cal-empty:#f0f0f0; --input-bg:#fff;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
-      background: #f0f2f7;
-      min-height: 100vh;
+      background: var(--bg); min-height: 100vh;
       display: flex; flex-direction: column; align-items: center;
-      padding: 0 0 80px;
-      color: #2d2d2d;
+      padding: 0 0 80px; color: var(--text); transition: background .3s, color .3s;
     }
     .container { width: 100%; max-width: 480px; padding: 0 16px; }
 
-    /* ── Tab 导航 ── */
+    /* ── Tab Bar ── */
     .tab-bar {
-      display: flex; background: #fff;
-      border-bottom: 1px solid #eee;
+      display: flex; background: var(--tab-bar);
+      border-bottom: 1px solid var(--tab-border);
       width: 100%; max-width: 480px;
       position: sticky; top: 0; z-index: 100;
+      transition: background .3s;
     }
     .tab-btn {
-      flex: 1; padding: 15px 0;
-      font-size: 14px; font-weight: 600; color: #aaa;
-      background: none; border: none; cursor: pointer;
+      flex: 1; padding: 15px 0; font-size: 14px; font-weight: 600;
+      color: var(--sub); background: none; border: none; cursor: pointer;
       border-bottom: 3px solid transparent;
-      transition: color .2s, border-color .2s;
-      font-family: inherit;
+      transition: color .2s, border-color .2s; font-family: inherit;
     }
-    .tab-btn.active { color: #6C63FF; border-bottom-color: #6C63FF; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-    /* ── 页面 ── */
+    /* ── Pages ── */
     .page { display: none; padding-top: 20px; }
     .page.active { display: block; }
 
     /* ── Header ── */
-    .header { text-align: center; margin-bottom: 16px; }
-    .header h1 { font-size: 20px; font-weight: 700; color: #6C63FF; letter-spacing: 1px; }
-    .header .date { font-size: 13px; color: #888; margin-top: 3px; }
+    .header { text-align: center; margin-bottom: 10px; }
+    .header h1 { font-size: 20px; font-weight: 700; color: var(--primary); letter-spacing: 1px; }
+    .header .date { font-size: 13px; color: var(--sub); margin-top: 3px; }
 
-    /* ── 进度卡片 ── */
-    .progress-card {
-      background: #fff; border-radius: 16px;
+    /* ── Slogan ── */
+    .daily-slogan {
+      display: flex; align-items: center; gap: 10px;
+      margin: 0 0 14px; color: var(--sub);
+    }
+    .slogan-line { flex: 1; height: 1px; background: var(--border); }
+    .slogan-text { font-size: 12px; font-style: italic; white-space: nowrap; color: var(--sub); }
+
+    /* ── Progress Ring Card ── */
+    .progress-ring-card {
+      background: var(--card); border-radius: 16px;
       padding: 16px 20px; margin-bottom: 12px;
-      box-shadow: 0 2px 12px rgba(108,99,255,.08);
+      box-shadow: 0 2px 12px var(--shadow);
+      display: flex; align-items: center; gap: 20px;
     }
-    .progress-label {
-      display: flex; justify-content: space-between;
-      font-size: 13px; color: #888; margin-bottom: 7px;
-    }
-    .progress-label span:last-child { font-weight: 600; color: #6C63FF; }
-    .progress-bar-bg { background: #eee; border-radius: 999px; height: 9px; overflow: hidden; }
-    .progress-bar-fill {
-      height: 100%; border-radius: 999px;
-      background: linear-gradient(90deg, #6C63FF, #a78bfa);
-      transition: width .4s ease; width: 0%;
-    }
+    .ring-wrap { flex-shrink: 0; }
+    .ring-stats { flex: 1; }
+    .ring-stats-title { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+    .ring-stats-done { font-size: 18px; font-weight: 700; color: var(--primary); }
+    .ring-stats-todo { font-size: 13px; color: var(--sub); margin-top: 3px; }
 
-    /* ── 分类筛选标签 ── */
+    /* ── Filter Bar ── */
     .filter-bar {
       display: flex; gap: 8px; overflow-x: auto;
-      padding: 2px 0 10px; margin-bottom: 4px;
-      scrollbar-width: none;
+      padding: 2px 0 10px; margin-bottom: 4px; scrollbar-width: none;
     }
     .filter-bar::-webkit-scrollbar { display: none; }
     .filter-chip {
-      flex-shrink: 0; padding: 5px 14px;
-      border-radius: 999px; font-size: 13px; font-weight: 600;
-      border: 1.5px solid #e5e7eb; background: #fff;
-      cursor: pointer; transition: all .2s; color: #888;
-      font-family: inherit;
+      flex-shrink: 0; padding: 5px 14px; border-radius: 999px;
+      font-size: 13px; font-weight: 600;
+      border: 1.5px solid var(--border); background: var(--card);
+      cursor: pointer; transition: all .2s; color: var(--sub); font-family: inherit;
     }
-    .filter-chip.active { background: #6C63FF; border-color: #6C63FF; color: #fff; }
+    .filter-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
-    /* ── 分类分组 ── */
+    /* ── Category Groups ── */
     .category-group { margin-bottom: 10px; }
     .category-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 8px 4px 6px; cursor: pointer; user-select: none;
     }
     .category-header-left { display: flex; align-items: center; gap: 8px; }
-    .category-arrow { font-size: 11px; color: #aaa; transition: transform .2s; }
+    .category-arrow { font-size: 11px; color: var(--sub); transition: transform .2s; }
     .category-group.collapsed .category-arrow { transform: rotate(-90deg); }
-    .category-name { font-size: 13px; font-weight: 700; color: #555; }
-    .category-count { font-size: 12px; color: #aaa; }
+    .category-name { font-size: 13px; font-weight: 700; color: var(--sub); }
+    .category-count { font-size: 12px; color: var(--sub); opacity: .7; }
     .category-body { display: flex; flex-direction: column; gap: 8px; }
     .category-group.collapsed .category-body { display: none; }
 
-    /* ── 习惯卡片 ── */
+    /* ── Habit Cards ── */
     .habit-card {
-      background: #fff; border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      background: var(--card); border-radius: 14px;
+      box-shadow: 0 2px 8px var(--shadow-sm);
       overflow: hidden; transition: box-shadow .2s;
     }
-    .habit-card:hover { box-shadow: 0 4px 16px rgba(108,99,255,.12); }
-    .habit-row {
-      display: flex; align-items: center; gap: 11px;
-      padding: 13px 14px;
-    }
+    .habit-card:hover { box-shadow: 0 4px 16px var(--shadow); }
+    .habit-row { display: flex; align-items: center; gap: 11px; padding: 13px 14px; }
     .habit-check {
       width: 26px; height: 26px; border-radius: 50%;
-      border: 2px solid #ddd; cursor: pointer; flex-shrink: 0;
+      border: 2px solid var(--border); cursor: pointer; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
-      transition: all .2s; background: #fff;
+      transition: all .2s; background: var(--card); position: relative;
     }
-    .habit-check:hover { border-color: #6C63FF; }
-    .habit-card.done .habit-check { background: #6C63FF; border-color: #6C63FF; }
+    .habit-check:hover { border-color: var(--primary); }
+    .habit-card.done .habit-check { background: var(--primary); border-color: var(--primary); }
     .check-icon { display: none; color: #fff; font-size: 13px; font-weight: bold; }
     .habit-card.done .check-icon { display: block; }
-    .habit-name {
-      flex: 1; font-size: 15px; font-weight: 500; transition: color .2s;
+    @keyframes checkBounce {
+      0% { transform: scale(0.7); } 55% { transform: scale(1.25); } 100% { transform: scale(1); }
     }
-    .habit-card.done .habit-name { text-decoration: line-through; color: #aaa; }
-    .habit-cat-badge {
-      font-size: 11px; color: #6C63FF; background: #f0eeff;
-      border-radius: 999px; padding: 2px 8px; flex-shrink: 0;
-    }
+    .habit-check.bounce { animation: checkBounce 0.35s cubic-bezier(.36,.07,.19,.97); }
+
+    .habit-name { flex: 1; font-size: 15px; font-weight: 500; transition: color .2s; }
+    .habit-card.done .habit-name { text-decoration: line-through; color: var(--done-text); }
     .habit-streak {
-      font-size: 12px; color: #f97316; font-weight: 600;
+      font-size: 12px; color: var(--streak-color); font-weight: 600;
       white-space: nowrap; flex-shrink: 0;
     }
     .habit-note-btn {
-      background: none; border: none; cursor: pointer;
-      font-size: 15px; padding: 2px 4px; border-radius: 6px;
-      transition: background .2s; flex-shrink: 0; line-height: 1;
-      position: relative;
+      background: none; border: none; cursor: pointer; font-size: 15px;
+      padding: 2px 4px; border-radius: 6px; transition: background .2s;
+      flex-shrink: 0; line-height: 1; position: relative;
     }
-    .habit-note-btn:hover { background: #f0eeff; }
+    .habit-note-btn:hover { background: var(--primary-light); }
     .habit-note-btn .note-dot {
-      position: absolute; top: 0; right: 0;
-      width: 7px; height: 7px; border-radius: 50%;
-      background: #6C63FF; display: none;
+      position: absolute; top: 0; right: 0; width: 7px; height: 7px;
+      border-radius: 50%; background: var(--primary); display: none;
     }
     .habit-note-btn.has-note .note-dot { display: block; }
     .habit-delete {
       background: none; border: none; cursor: pointer;
-      color: #ccc; font-size: 18px; line-height: 1;
-      padding: 2px 4px; border-radius: 6px;
-      transition: color .2s, background .2s;
+      color: var(--border); font-size: 18px; line-height: 1;
+      padding: 2px 4px; border-radius: 6px; transition: color .2s, background .2s;
       opacity: 0; flex-shrink: 0;
     }
     .habit-card:hover .habit-delete { opacity: 1; }
-    .habit-delete:hover { color: #ef4444; background: #fee2e2; }
+    .habit-delete:hover { color: var(--red); background: #fee2e2; }
 
-    /* ── 备忘 / 记账 展开区 ── */
+    /* ── Note / Expense / Reading Area ── */
     .habit-note-area {
       display: none; padding: 0 14px 12px;
-      border-top: 1px solid #f3f4f6;
+      border-top: 1px solid var(--border);
     }
     .habit-note-area.open { display: block; }
-    .note-label { font-size: 12px; color: #aaa; margin: 10px 0 6px; }
+    .note-label { font-size: 12px; color: var(--sub); margin: 10px 0 6px; }
     .note-textarea {
-      width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px;
+      width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
       padding: 9px 12px; font-size: 14px; font-family: inherit;
       resize: vertical; min-height: 68px; outline: none;
-      transition: border-color .2s; color: #333;
+      transition: border-color .2s; color: var(--text); background: var(--input-bg);
     }
-    .note-textarea:focus { border-color: #6C63FF; }
-
-    /* 记账输入 */
-    .expense-row {
-      display: flex; align-items: center; gap: 10px; margin-top: 10px;
-    }
-    .expense-label { font-size: 13px; color: #555; white-space: nowrap; }
-    .expense-input {
-      width: 120px; border: 1.5px solid #e5e7eb; border-radius: 10px;
-      padding: 8px 12px; font-size: 15px; font-family: inherit;
-      outline: none; transition: border-color .2s;
-    }
-    .expense-input:focus { border-color: #6C63FF; }
-    .expense-monthly {
-      font-size: 12px; color: #888; margin-top: 6px;
-    }
-    .expense-monthly span { color: #6C63FF; font-weight: 700; }
-
+    .note-textarea:focus { border-color: var(--primary); }
     .note-save-btn {
-      margin-top: 8px; background: #6C63FF; color: #fff;
+      margin-top: 8px; background: var(--primary); color: #fff;
       border: none; border-radius: 8px; padding: 7px 16px;
       font-size: 13px; font-weight: 600; cursor: pointer;
       font-family: inherit; transition: background .2s;
     }
-    .note-save-btn:hover { background: #5a52e0; }
+    .note-save-btn:hover { background: var(--primary-hover); }
 
-    /* ── 空状态 ── */
+    /* Expense */
+    .expense-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .expense-label { font-size: 13px; color: var(--text); white-space: nowrap; }
+    .expense-input {
+      width: 120px; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 8px 12px; font-size: 15px; font-family: inherit; outline: none;
+      transition: border-color .2s; background: var(--input-bg); color: var(--text);
+    }
+    .expense-input:focus { border-color: var(--primary); }
+    .expense-monthly { font-size: 12px; color: var(--sub); margin-top: 6px; }
+    .expense-monthly span { color: var(--primary); font-weight: 700; }
+
+    /* Reading */
+    .reading-row { display: flex; gap: 8px; margin-top: 4px; }
+    .book-input {
+      flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 8px 12px; font-size: 14px; font-family: inherit; outline: none;
+      transition: border-color .2s; background: var(--input-bg); color: var(--text);
+    }
+    .book-input:focus { border-color: var(--primary); }
+    .pages-today-input {
+      width: 90px; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 8px 10px; font-size: 14px; font-family: inherit; outline: none;
+      transition: border-color .2s; background: var(--input-bg); color: var(--text);
+    }
+    .pages-today-input:focus { border-color: var(--primary); }
+    .reading-total-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .reading-total-label { font-size: 12px; color: var(--sub); white-space: nowrap; }
+    .total-pages-input {
+      width: 100px; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 7px 10px; font-size: 13px; font-family: inherit; outline: none;
+      transition: border-color .2s; background: var(--input-bg); color: var(--text);
+    }
+    .total-pages-input:focus { border-color: var(--primary); }
+    .reading-progress { margin-top: 10px; }
+    .reading-progress-text { font-size: 12px; color: var(--sub); margin-bottom: 5px; }
+    .reading-bar-bg {
+      background: var(--border); border-radius: 999px; height: 7px; overflow: hidden;
+    }
+    .reading-bar-fill {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), #a78bfa);
+      transition: width .4s ease;
+    }
+    .reading-pct { font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 3px; display: block; }
+
+    /* ── Empty State ── */
     .empty-state {
-      text-align: center; padding: 36px 20px; color: #bbb;
-      font-size: 15px; background: #fff; border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.04); margin-bottom: 12px;
+      text-align: center; padding: 36px 20px; color: var(--sub);
+      font-size: 15px; background: var(--card); border-radius: 14px;
+      box-shadow: 0 2px 8px var(--shadow-sm); margin-bottom: 12px;
     }
     .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
 
-    /* ── 添加习惯区域 ── */
+    /* ── Add Area ── */
     .add-area {
-      background: #fff; border-radius: 14px;
-      padding: 12px 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      background: var(--card); border-radius: 14px;
+      padding: 12px 14px; box-shadow: 0 2px 8px var(--shadow-sm);
     }
     .add-row { display: flex; gap: 8px; }
     .add-input {
-      flex: 1; border: 1.5px solid #e5e7eb; border-radius: 10px;
-      padding: 10px 14px; font-size: 14px; font-family: inherit;
-      outline: none; transition: border-color .2s;
+      flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 10px 14px; font-size: 14px; font-family: inherit; outline: none;
+      transition: border-color .2s; background: var(--input-bg); color: var(--text);
     }
-    .add-input:focus { border-color: #6C63FF; }
+    .add-input:focus { border-color: var(--primary); }
     .add-btn {
-      background: #6C63FF; color: #fff; border: none;
-      border-radius: 10px; padding: 10px 16px;
-      font-size: 14px; font-weight: 600; cursor: pointer;
-      transition: background .2s, transform .1s;
-      font-family: inherit; white-space: nowrap;
+      background: var(--primary); color: #fff; border: none; border-radius: 10px;
+      padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: background .2s, transform .1s; font-family: inherit; white-space: nowrap;
     }
-    .add-btn:hover { background: #5a52e0; }
+    .add-btn:hover { background: var(--primary-hover); }
     .add-btn:active { transform: scale(.96); }
     .add-cat-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-    .add-cat-label { font-size: 13px; color: #888; white-space: nowrap; }
+    .add-cat-label { font-size: 13px; color: var(--sub); white-space: nowrap; }
     .add-cat-select {
-      flex: 1; border: 1.5px solid #e5e7eb; border-radius: 10px;
-      padding: 7px 10px; font-size: 13px; font-family: inherit;
-      outline: none; background: #fff; cursor: pointer;
+      flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 7px 10px; font-size: 13px; font-family: inherit; outline: none;
+      background: var(--input-bg); cursor: pointer; color: var(--text);
     }
 
-    /* ── 全部完成横幅 ── */
+    /* ── All Done Banner ── */
     .all-done-banner {
       display: none;
-      background: linear-gradient(135deg, #6C63FF, #a78bfa);
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
       color: #fff; text-align: center; border-radius: 14px;
       padding: 14px; font-size: 15px; font-weight: 600;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 16px rgba(108,99,255,.3);
+      margin-bottom: 12px; box-shadow: 0 4px 16px var(--shadow);
       animation: slideDown .4s ease;
     }
-    @keyframes slideDown {
-      from { transform: translateY(-10px); opacity: 0; }
-      to   { transform: translateY(0); opacity: 1; }
-    }
+    @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
     /* ══════════════════════════════════════
-       模版库页面
+       模版库
     ══════════════════════════════════════ */
     .tpl-header { margin-bottom: 16px; }
-    .tpl-header h2 { font-size: 18px; font-weight: 700; }
-    .tpl-header p  { font-size: 13px; color: #aaa; margin-top: 3px; }
-
-    /* 子 Tab */
+    .tpl-header h2 { font-size: 18px; font-weight: 700; color: var(--text); }
+    .tpl-header p  { font-size: 13px; color: var(--sub); margin-top: 3px; }
     .sub-tab-bar {
-      display: flex; gap: 0; background: #fff;
-      border-radius: 12px; padding: 4px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      display: flex; background: var(--card); border-radius: 12px; padding: 4px;
+      margin-bottom: 16px; box-shadow: 0 2px 8px var(--shadow-sm);
     }
     .sub-tab-btn {
       flex: 1; padding: 8px 0; font-size: 14px; font-weight: 600;
-      color: #aaa; background: none; border: none; border-radius: 9px;
+      color: var(--sub); background: none; border: none; border-radius: 9px;
       cursor: pointer; transition: all .2s; font-family: inherit;
     }
-    .sub-tab-btn.active { background: #6C63FF; color: #fff; }
-
-    /* 卡片网格 */
+    .sub-tab-btn.active { background: var(--primary); color: #fff; }
     .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .tpl-card {
-      background: #fff; border-radius: 16px;
-      padding: 18px 14px; cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      background: var(--card); border-radius: 16px; padding: 18px 14px;
+      cursor: pointer; box-shadow: 0 2px 8px var(--shadow-sm);
       transition: box-shadow .2s, transform .15s;
     }
-    .tpl-card:hover { box-shadow: 0 6px 20px rgba(108,99,255,.15); transform: translateY(-2px); }
+    .tpl-card:hover { box-shadow: 0 6px 20px var(--shadow); transform: translateY(-2px); }
     .tpl-emoji { font-size: 28px; margin-bottom: 8px; }
-    .tpl-name  { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-    .tpl-days  { font-size: 12px; color: #6C63FF; font-weight: 600; margin-bottom: 6px; }
-    .tpl-desc  { font-size: 12px; color: #999; line-height: 1.5; }
-
-    /* 模版导入弹窗 */
+    .tpl-name  { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .tpl-days  { font-size: 12px; color: var(--primary); font-weight: 600; margin-bottom: 6px; }
+    .tpl-desc  { font-size: 12px; color: var(--sub); line-height: 1.5; }
     .tpl-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.4); z-index: 300;
-      align-items: flex-end; justify-content: center;
+      background: rgba(0,0,0,.4); z-index: 300; align-items: flex-end; justify-content: center;
     }
     .tpl-overlay.open { display: flex; }
     .tpl-panel {
-      background: #fff; border-radius: 20px 20px 0 0;
-      width: 100%; max-width: 480px;
-      max-height: 80vh; display: flex; flex-direction: column;
-      animation: slideUp .3s ease;
+      background: var(--card); border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 480px; max-height: 80vh;
+      display: flex; flex-direction: column; animation: slideUp .3s ease;
     }
-    @keyframes slideUp {
-      from { transform: translateY(50px); opacity: 0; }
-      to   { transform: translateY(0); opacity: 1; }
-    }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .tpl-panel-head {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 20px 12px; flex-shrink: 0;
-      border-bottom: 1px solid #f3f4f6;
+      padding: 20px 20px 12px; flex-shrink: 0; border-bottom: 1px solid var(--border);
     }
-    .tpl-panel-title-wrap .tpl-panel-title { font-size: 17px; font-weight: 700; }
-    .tpl-panel-title-wrap .tpl-panel-meta { font-size: 12px; color: #aaa; margin-top: 2px; }
+    .tpl-panel-title-wrap .tpl-panel-title { font-size: 17px; font-weight: 700; color: var(--text); }
+    .tpl-panel-title-wrap .tpl-panel-meta { font-size: 12px; color: var(--sub); margin-top: 2px; }
     .tpl-close-btn {
-      background: #f3f4f6; border: none; border-radius: 50%;
-      width: 30px; height: 30px; cursor: pointer;
-      font-size: 16px; line-height: 30px; text-align: center;
+      background: var(--border); border: none; border-radius: 50%;
+      width: 30px; height: 30px; cursor: pointer; font-size: 16px;
+      line-height: 30px; text-align: center; color: var(--text);
     }
-    .tpl-habit-list {
-      overflow-y: auto; padding: 12px 20px; flex: 1;
-    }
+    .tpl-habit-list { overflow-y: auto; padding: 12px 20px; flex: 1; }
     .tpl-habit-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 11px 0; border-bottom: 1px solid #f7f7f7;
-      cursor: pointer;
+      padding: 11px 0; border-bottom: 1px solid var(--border); cursor: pointer;
     }
     .tpl-habit-item:last-child { border-bottom: none; }
     .tpl-cb {
-      width: 22px; height: 22px; border-radius: 6px;
-      border: 2px solid #ddd; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .2s;
+      width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all .2s;
     }
-    .tpl-habit-item.selected .tpl-cb { background: #6C63FF; border-color: #6C63FF; }
+    .tpl-habit-item.selected .tpl-cb { background: var(--primary); border-color: var(--primary); }
     .tpl-cb-icon { display: none; color: #fff; font-size: 12px; font-weight: bold; }
     .tpl-habit-item.selected .tpl-cb-icon { display: block; }
-    .tpl-habit-name { font-size: 14px; }
+    .tpl-habit-name { font-size: 14px; color: var(--text); }
     .tpl-panel-foot {
       padding: 12px 20px 28px; display: flex; gap: 10px;
-      border-top: 1px solid #f3f4f6; flex-shrink: 0;
+      border-top: 1px solid var(--border); flex-shrink: 0;
     }
     .tpl-toggle-all {
-      background: #f3f4f6; color: #555; border: none;
-      border-radius: 10px; padding: 10px 14px;
-      font-size: 13px; font-weight: 600; cursor: pointer;
+      background: var(--border); color: var(--text); border: none; border-radius: 10px;
+      padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
       font-family: inherit; white-space: nowrap;
     }
     .tpl-import-btn {
-      flex: 1; background: #6C63FF; color: #fff; border: none;
-      border-radius: 10px; padding: 10px 14px;
-      font-size: 14px; font-weight: 600; cursor: pointer;
-      font-family: inherit; transition: background .2s;
+      flex: 1; background: var(--primary); color: #fff; border: none;
+      border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background .2s;
     }
-    .tpl-import-btn:hover { background: #5a52e0; }
+    .tpl-import-btn:hover { background: var(--primary-hover); }
 
     /* ══════════════════════════════════════
        我的页面
     ══════════════════════════════════════ */
-    .my-header { margin-bottom: 16px; }
-    .my-header h2 { font-size: 18px; font-weight: 700; }
-    .my-header p  { font-size: 13px; color: #aaa; margin-top: 3px; }
+    .my-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .my-header h2 { font-size: 18px; font-weight: 700; color: var(--text); }
+    .my-header p  { font-size: 13px; color: var(--sub); margin-top: 3px; }
+    .theme-toggle-btn {
+      background: var(--primary-light); border: none; border-radius: 50%;
+      width: 36px; height: 36px; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s; flex-shrink: 0;
+    }
+
+    /* Stats Row */
     .stats-row { display: flex; gap: 10px; margin-bottom: 16px; }
     .stat-card {
-      flex: 1; background: #fff; border-radius: 14px;
-      padding: 16px 12px; text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+      flex: 1; background: var(--card); border-radius: 14px;
+      padding: 16px 12px; text-align: center; box-shadow: 0 2px 8px var(--shadow-sm);
     }
-    .stat-value { font-size: 26px; font-weight: 700; color: #6C63FF; }
-    .stat-label { font-size: 12px; color: #aaa; margin-top: 4px; }
+    .stat-value { font-size: 26px; font-weight: 700; color: var(--primary); }
+    .stat-label { font-size: 12px; color: var(--sub); margin-top: 4px; }
+
+    /* Streak Card */
+    .my-section-card {
+      background: var(--card); border-radius: 16px; padding: 18px;
+      margin-bottom: 14px; box-shadow: 0 2px 12px var(--shadow-sm);
+    }
+    .my-section-title {
+      font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--text);
+    }
+    .section-empty { font-size: 13px; color: var(--sub); text-align: center; padding: 12px 0; }
+    .streak-card-body { display: flex; gap: 12px; align-items: stretch; }
+    .streak-col { flex: 1; }
+    .streak-divider { width: 1px; background: var(--border); flex-shrink: 0; }
+    .streak-label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+    .streak-value { font-size: 28px; font-weight: 700; color: var(--primary); line-height: 1; margin-bottom: 8px; }
+    .streak-unit { font-size: 14px; font-weight: 400; color: var(--sub); margin-left: 2px; }
+    .streak-bar-bg { background: var(--border); border-radius: 999px; height: 7px; overflow: hidden; margin-bottom: 6px; }
+    .streak-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #a78bfa, var(--primary)); transition: width .5s ease; }
+    .streak-bar-fill.current { background: linear-gradient(90deg, var(--primary), #f97316); }
+    .streak-col.new-record .streak-value { color: #f59e0b; }
+    .new-record-badge { font-size: 12px; color: #f59e0b; font-weight: 600; }
+
+    /* Chart Card */
+    .chart-legend { display: flex; gap: 16px; margin-top: 8px; justify-content: flex-end; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--sub); }
+
+    /* Calendar */
     .calendar-card {
-      background: #fff; border-radius: 16px;
-      padding: 18px; margin-bottom: 14px;
-      box-shadow: 0 2px 12px rgba(108,99,255,.08);
+      background: var(--card); border-radius: 16px; padding: 18px;
+      margin-bottom: 14px; box-shadow: 0 2px 12px var(--shadow);
       overflow-x: auto;
     }
-    .calendar-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .calendar-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
     .cal-grid { display: flex; gap: 4px; }
     .cal-week { display: flex; flex-direction: column; gap: 4px; }
     .cal-day {
-      width: 13px; height: 13px; border-radius: 3px;
-      cursor: pointer; transition: transform .1s; background: #f0f0f0;
+      width: 13px; height: 13px; border-radius: 3px; cursor: pointer;
+      transition: transform .1s; background: var(--cal-empty);
     }
     .cal-day:hover { transform: scale(1.3); }
-    .cal-day.rate-low  { background: #c4b5fd; }
-    .cal-day.rate-mid  { background: #8b5cf6; }
-    .cal-day.rate-full { background: #6C63FF; }
-    .cal-day.today-cell { outline: 2px solid #f97316; outline-offset: 1px; }
+    .cal-day.rate-low  { background: var(--rate-low); }
+    .cal-day.rate-mid  { background: var(--rate-mid); }
+    .cal-day.rate-full { background: var(--primary); }
+    .cal-day.today-cell { outline: 2px solid var(--streak-color); outline-offset: 1px; }
     .cal-legend {
       display: flex; align-items: center; gap: 5px;
-      font-size: 11px; color: #aaa; margin-top: 10px; justify-content: flex-end;
+      font-size: 11px; color: var(--sub); margin-top: 10px; justify-content: flex-end;
     }
     .cal-legend-box { width: 11px; height: 11px; border-radius: 3px; }
 
-    /* ── 日详情弹窗 ── */
+    /* Reading Summary */
+    .reading-stats-row {
+      display: flex; gap: 20px; font-size: 14px; color: var(--sub);
+      margin-bottom: 12px;
+    }
+    .reading-stats-row b { color: var(--text); }
+    .book-progress-item { margin-bottom: 12px; }
+    .book-progress-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 5px;
+    }
+    .book-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .book-pages { font-size: 12px; color: var(--sub); }
+
+    /* Expense Summary */
+    .expense-summary-inner { padding: 4px 0; }
+    .expense-amount-row { display: flex; align-items: baseline; gap: 4px; margin-bottom: 10px; }
+    .expense-spent { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .expense-budget-label { font-size: 13px; color: var(--sub); }
+    .expense-bar-bg { background: var(--border); border-radius: 999px; height: 10px; overflow: hidden; margin-bottom: 8px; }
+    .expense-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), #a78bfa); transition: width .5s ease; }
+    .expense-bar-fill.over { background: linear-gradient(90deg, #f97316, var(--red)); }
+    .expense-detail-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); margin-bottom: 12px; }
+    .budget-btn {
+      background: var(--primary-light); color: var(--primary); border: none;
+      border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background .2s;
+    }
+    .budget-btn:hover { background: var(--primary); color: #fff; }
+
+    /* Monthly Summary Button */
+    .summary-btn-wrap { text-align: center; margin-top: 8px; margin-bottom: 16px; }
+    .summary-btn {
+      background: var(--primary-light); color: var(--primary); border: none;
+      border-radius: 999px; padding: 10px 24px; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .summary-btn:hover { background: var(--primary); color: #fff; }
+
+    /* ── Day Detail Modal ── */
     .day-detail-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.35); z-index: 200;
-      align-items: flex-end; justify-content: center;
+      background: rgba(0,0,0,.35); z-index: 200; align-items: flex-end; justify-content: center;
     }
     .day-detail-overlay.open { display: flex; }
     .day-detail-panel {
-      background: #fff; border-radius: 20px 20px 0 0;
+      background: var(--card); border-radius: 20px 20px 0 0;
       width: 100%; max-width: 480px;
       padding: 22px 20px 36px; max-height: 70vh; overflow-y: auto;
       animation: slideUp .3s ease;
     }
     .day-detail-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
     }
-    .day-detail-title { font-size: 16px; font-weight: 700; }
+    .day-detail-title { font-size: 16px; font-weight: 700; color: var(--text); }
     .day-detail-close {
-      background: #f3f4f6; border: none; border-radius: 50%;
-      width: 30px; height: 30px; cursor: pointer;
-      font-size: 16px; line-height: 30px; text-align: center;
+      background: var(--border); border: none; border-radius: 50%;
+      width: 30px; height: 30px; cursor: pointer; font-size: 16px;
+      line-height: 30px; text-align: center; color: var(--text);
     }
     .day-detail-item {
       display: flex; flex-direction: column; gap: 4px;
-      padding: 11px 0; border-bottom: 1px solid #f3f4f6;
+      padding: 11px 0; border-bottom: 1px solid var(--border);
     }
     .day-detail-item:last-child { border-bottom: none; }
     .day-detail-row { display: flex; align-items: center; gap: 10px; }
-    .day-detail-name { font-size: 14px; font-weight: 500; }
-    .day-detail-note { font-size: 13px; color: #888; padding-left: 26px; }
+    .day-detail-name { font-size: 14px; font-weight: 500; color: var(--text); }
+    .day-detail-note { font-size: 13px; color: var(--sub); padding-left: 26px; }
 
-    /* ── 撒花 ── */
+    /* ── Monthly Summary Modal ── */
+    .summary-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 400;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .summary-overlay.open { display: flex; }
+    .summary-panel {
+      background: var(--card); border-radius: 20px;
+      width: 100%; max-width: 400px; overflow: hidden;
+      animation: summaryPop .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes summaryPop {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+    .summary-panel-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+    }
+    .summary-panel-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .summary-close-btn {
+      background: var(--border); border: none; border-radius: 50%;
+      width: 30px; height: 30px; cursor: pointer; font-size: 16px;
+      line-height: 30px; text-align: center; color: var(--text);
+    }
+    .summary-gradient-card {
+      background: linear-gradient(135deg, rgba(108,99,255,.12), transparent);
+      margin: 16px; border-radius: 16px; padding: 20px;
+      border: 1.5px solid var(--primary-light);
+    }
+    .summary-month-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 14px; }
+    .summary-items { display: flex; flex-direction: column; gap: 10px; }
+    .summary-item { font-size: 14px; color: var(--text); }
+    .summary-item b { color: var(--primary); }
+    .summary-share-tip { font-size: 12px; color: var(--sub); text-align: center; padding: 12px 20px 20px; }
+
+    /* ── Particles ── */
+    .check-particle {
+      position: fixed; width: 8px; height: 8px; border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+      animation: particleFly 0.6s ease-out forwards;
+      transform: translate(-50%, -50%);
+    }
+    @keyframes particleFly {
+      0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0); opacity: 0; }
+    }
+
+    /* ── Confetti ── */
     .confetti-wrapper {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       pointer-events: none; overflow: hidden; z-index: 9999;
@@ -424,7 +573,7 @@
 </head>
 <body>
 
-<!-- ── Tab 导航 ── -->
+<!-- Tab Bar -->
 <div class="tab-bar">
   <button class="tab-btn active" data-tab="today">今日</button>
   <button class="tab-btn" data-tab="templates">模版库</button>
@@ -440,19 +589,35 @@
       <div class="date" id="today-date"></div>
     </div>
 
-    <div class="progress-card" id="progress-card" style="display:none">
-      <div class="progress-label">
-        <span>今日进度</span><span id="progress-text">0 / 0</span>
+    <div class="daily-slogan">
+      <span class="slogan-line"></span>
+      <span class="slogan-text">还没想清楚没关系，先把今天过好</span>
+      <span class="slogan-line"></span>
+    </div>
+
+    <div class="progress-ring-card" id="progress-ring-card" style="display:none">
+      <div class="ring-wrap">
+        <svg id="ring-svg" viewBox="0 0 100 100" width="88" height="88">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--primary-light)" stroke-width="8"/>
+          <circle id="ring-arc" cx="50" cy="50" r="40" fill="none" stroke="var(--primary)"
+                  stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="251.2" stroke-dashoffset="251.2"
+                  transform="rotate(-90 50 50)"
+                  style="transition: stroke-dashoffset 0.5s ease"/>
+          <text id="ring-count-text" x="50" y="45" text-anchor="middle"
+                font-size="18" font-weight="700" fill="var(--text)">0/0</text>
+          <text x="50" y="62" text-anchor="middle" font-size="10" fill="var(--sub)">个习惯</text>
+        </svg>
       </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progress-bar"></div>
+      <div class="ring-stats">
+        <div class="ring-stats-title">今日进度</div>
+        <div class="ring-stats-done" id="ring-stats-done">— 个完成</div>
+        <div class="ring-stats-todo" id="ring-stats-todo">— 个待完成</div>
       </div>
     </div>
 
     <div class="all-done-banner" id="all-done-banner">🎉 太棒了！今天的习惯全部完成！</div>
-
     <div class="filter-bar" id="filter-bar"></div>
-
     <div id="habit-list"></div>
 
     <div class="add-area">
@@ -463,6 +628,14 @@
       <div class="add-cat-row">
         <span class="add-cat-label">分类：</span>
         <select class="add-cat-select" id="cat-select"></select>
+      </div>
+      <div class="add-cat-row">
+        <span class="add-cat-label">类型：</span>
+        <select class="add-cat-select" id="type-select">
+          <option value="normal">📋 普通</option>
+          <option value="reading">📚 阅读</option>
+          <option value="expense">💰 记账</option>
+        </select>
       </div>
     </div>
   </div>
@@ -484,27 +657,58 @@
   <!-- ══ 我的 ══ -->
   <div class="page" id="page-mine">
     <div class="my-header">
-      <h2>我的习惯记录</h2>
-      <p>打卡历史与备忘</p>
+      <div>
+        <h2>我的习惯记录</h2>
+        <p>打卡历史与数据分析</p>
+      </div>
+      <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()">🌙</button>
     </div>
+
     <div class="stats-row" id="stats-row"></div>
+
+    <!-- Streak -->
+    <div class="my-section-card">
+      <div class="my-section-title">连续打卡记录</div>
+      <div id="streak-container"></div>
+    </div>
+
+    <!-- Chart -->
+    <div class="my-section-card">
+      <div class="my-section-title">完成率趋势 · 本周 vs 上周</div>
+      <div id="chart-container"></div>
+    </div>
+
+    <!-- Calendar Heatmap -->
     <div class="calendar-card">
       <div class="calendar-title">打卡热图 · 最近 90 天</div>
       <div id="calendar-container" class="cal-grid"></div>
       <div class="cal-legend">
         <span>少</span>
-        <div class="cal-legend-box" style="background:#f0f0f0"></div>
-        <div class="cal-legend-box" style="background:#c4b5fd"></div>
-        <div class="cal-legend-box" style="background:#8b5cf6"></div>
-        <div class="cal-legend-box" style="background:#6C63FF"></div>
+        <div class="cal-legend-box" style="background:var(--cal-empty)"></div>
+        <div class="cal-legend-box" style="background:var(--rate-low)"></div>
+        <div class="cal-legend-box" style="background:var(--rate-mid)"></div>
+        <div class="cal-legend-box" style="background:var(--primary)"></div>
         <span>多</span>
       </div>
+    </div>
+
+    <!-- Reading Summary (conditional) -->
+    <div id="reading-summary-section"></div>
+
+    <!-- Expense Summary (conditional) -->
+    <div id="expense-summary-section"></div>
+
+    <!-- Monthly Summary Button -->
+    <div class="summary-btn-wrap">
+      <button class="summary-btn" onclick="showMonthlySummary(todayStr().slice(0,7))">
+        📋 查看本月总结
+      </button>
     </div>
   </div>
 
 </div><!-- /container -->
 
-<!-- 日详情弹窗 -->
+<!-- Day Detail Modal -->
 <div class="day-detail-overlay" id="day-detail-overlay">
   <div class="day-detail-panel">
     <div class="day-detail-header">
@@ -515,7 +719,7 @@
   </div>
 </div>
 
-<!-- 模版导入弹窗 -->
+<!-- Template Import Modal -->
 <div class="tpl-overlay" id="tpl-overlay">
   <div class="tpl-panel">
     <div class="tpl-panel-head">
@@ -533,11 +737,29 @@
   </div>
 </div>
 
+<!-- Monthly Summary Modal -->
+<div class="summary-overlay" id="summary-overlay">
+  <div class="summary-panel">
+    <div class="summary-panel-head">
+      <div class="summary-panel-title">月度总结</div>
+      <button class="summary-close-btn" id="summary-close-btn">✕</button>
+    </div>
+    <div id="summary-body"></div>
+    <div class="summary-share-tip">截图分享，记录你的成长 🌟</div>
+  </div>
+</div>
+
 <div class="confetti-wrapper" id="confetti-wrapper"></div>
 
 <script>
+// ── Theme init (before render) ──
+(function() {
+  const t = localStorage.getItem('themeOverride');
+  if (t) document.documentElement.setAttribute('data-theme', t);
+})();
+
 // ═══════════════════════════════════════════════
-// 模版数据
+// Templates
 // ═══════════════════════════════════════════════
 const TEMPLATES = {
   challenge: [
@@ -549,7 +771,7 @@ const TEMPLATES = {
         { name: '清晨早起（6-8AM）', type: 'normal' },
         { name: '晨间例行公事 1小时', type: 'normal' },
         { name: '运动 45分钟', type: 'normal' },
-        { name: '阅读 10页书', type: 'normal' },
+        { name: '阅读 10页书', type: 'reading' },
         { name: '健康饮食（无垃圾食品）', type: 'normal' },
         { name: '专注工作/学习 3小时', type: 'normal' },
         { name: '每日复盘记录', type: 'normal' },
@@ -563,7 +785,7 @@ const TEMPLATES = {
         { name: '运动 30分钟', type: 'normal' },
         { name: '户外散步 20分钟', type: 'normal' },
         { name: '喝水 2L', type: 'normal' },
-        { name: '阅读 10页书', type: 'normal' },
+        { name: '阅读 10页书', type: 'reading' },
         { name: '记录今日一个进步', type: 'normal' },
       ]
     },
@@ -596,7 +818,7 @@ const TEMPLATES = {
       desc: '30天坚持每天读书1小时，月底读完一本书',
       category: '挑战',
       habits: [
-        { name: '阅读 1小时', type: 'normal' },
+        { name: '阅读 1小时', type: 'reading' },
         { name: '记录读书笔记', type: 'normal' },
         { name: '月底完成一本书（打卡确认）', type: 'normal' },
       ]
@@ -617,12 +839,12 @@ const TEMPLATES = {
     },
     {
       id: 'reskill', emoji: '🖥️', name: '自学转行', days: '持续',
-      desc: '适合文科转码、自学AI等转型场景，每天稳步积累',
+      desc: '适合转型场景，每天稳步积累',
       category: '学习',
       habits: [
         { name: '学习新技能 1小时', type: 'normal' },
         { name: '完成一个小练习或项目', type: 'normal' },
-        { name: '阅读技术文章/教程', type: 'normal' },
+        { name: '阅读技术文章/教程', type: 'reading' },
         { name: '记录今日所学知识点', type: 'normal' },
         { name: '参与社区/论坛讨论', type: 'normal' },
       ]
@@ -681,7 +903,7 @@ const DEFAULT_CATEGORIES = ['健康', '学习', '社交', '工作', '生活'];
 const STORAGE_KEY = 'habit_tracker_v2';
 
 // ═══════════════════════════════════════════════
-// 工具函数
+// Utils
 // ═══════════════════════════════════════════════
 function dateStr(d) {
   d = d || new Date();
@@ -690,11 +912,11 @@ function dateStr(d) {
 function todayStr()     { return dateStr(); }
 function yesterdayStr() { const d = new Date(); d.setDate(d.getDate()-1); return dateStr(d); }
 function escapeHtml(s)  {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ═══════════════════════════════════════════════
-// 数据层
+// Data Layer
 // ═══════════════════════════════════════════════
 function loadData()  { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
 function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
@@ -702,28 +924,42 @@ function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 function initData() {
   const raw = loadData();
   return {
-    habits:     raw.habits     || [],
-    categories: raw.categories || [...DEFAULT_CATEGORIES],
-    records:    raw.records    || {},
-    notes:      raw.notes      || {},
-    expenses:   raw.expenses   || {},
-    lastVisit:  raw.lastVisit  || todayStr()
+    habits:       (raw.habits || []).map(h => ({ bestStreak: 0, ...h })),
+    categories:   raw.categories   || [...DEFAULT_CATEGORIES],
+    records:      raw.records      || {},
+    notes:        raw.notes        || {},
+    expenses:     raw.expenses     || {},
+    expenseBudget: raw.expenseBudget || 0,
+    readingLogs:  raw.readingLogs  || {},
+    readingBooks: raw.readingBooks || {},
+    lastVisit:    raw.lastVisit    || todayStr(),
+    lastSummaryMonth: raw.lastSummaryMonth || ''
   };
 }
 
 function checkDayReset(data) {
   const today = todayStr();
   if (data.lastVisit === today) return data;
+
   const ydayRec = data.records[yesterdayStr()] || {};
-  data.habits = data.habits.map(h => ({
-    ...h,
-    streak: ydayRec[h.id] ? (h.streak || 0) + 1 : 0
-  }));
-  // 保留最近 90 天
-  [data.records, data.notes, data.expenses].forEach(obj => {
-    const keys = Object.keys(obj).sort();
-    while (keys.length > 90) { const k = keys.shift(); delete obj[k]; }
+  data.habits = data.habits.map(h => {
+    const newStreak = ydayRec[h.id] ? (h.streak || 0) + 1 : 0;
+    return { ...h, streak: newStreak, bestStreak: Math.max(h.bestStreak || 0, newStreak) };
   });
+
+  // Detect month change for summary
+  const lastMonth = (data.lastVisit || '').slice(0, 7);
+  const thisMonth = today.slice(0, 7);
+  if (lastMonth && lastMonth !== thisMonth && lastMonth !== data.lastSummaryMonth) {
+    data.pendingSummaryMonth = lastMonth;
+  }
+
+  // Prune to 90 days
+  [data.records, data.notes, data.expenses, data.readingLogs].forEach(obj => {
+    const keys = Object.keys(obj).sort();
+    while (keys.length > 90) { delete obj[keys.shift()]; }
+  });
+
   data.lastVisit = today;
   if (!data.records[today]) data.records[today] = {};
   saveData(data);
@@ -731,12 +967,10 @@ function checkDayReset(data) {
 }
 
 let appData = checkDayReset(initData());
-
-// 当前筛选分类（null = 全部）
 let activeFilter = null;
 
 // ═══════════════════════════════════════════════
-// 渲染：今日
+// Render: Today
 // ═══════════════════════════════════════════════
 function renderDate() {
   const d = new Date();
@@ -745,26 +979,27 @@ function renderDate() {
     `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 星期${days[d.getDay()]}`;
 }
 
-function renderProgress() {
-  const card  = document.getElementById('progress-card');
+function renderProgressRing() {
+  const card  = document.getElementById('progress-ring-card');
   const total = appData.habits.length;
   if (total === 0) { card.style.display = 'none'; return; }
   card.style.display = '';
   const rec  = appData.records[todayStr()] || {};
   const done = appData.habits.filter(h => rec[h.id]).length;
-  document.getElementById('progress-text').textContent = `${done} / ${total}`;
-  document.getElementById('progress-bar').style.width  = `${Math.round(done/total*100)}%`;
+  const circ = 2 * Math.PI * 40; // 251.2
+  const offset = circ * (1 - done / total);
+  document.getElementById('ring-arc').style.strokeDashoffset = offset;
+  document.getElementById('ring-count-text').textContent = `${done}/${total}`;
+  document.getElementById('ring-stats-done').textContent  = `${done} 个完成`;
+  document.getElementById('ring-stats-todo').textContent  = `${total - done} 个待完成`;
 }
 
 function renderFilterBar() {
   const bar = document.getElementById('filter-bar');
-  // 只显示实际有习惯的分类
   const usedCats = [...new Set(appData.habits.map(h => h.category || '生活'))];
   if (usedCats.length <= 1) { bar.innerHTML = ''; return; }
-  const all = [null, ...usedCats];
-  bar.innerHTML = all.map(c => `
-    <button class="filter-chip${activeFilter === c ? ' active' : ''}"
-            data-filter="${c === null ? '' : c}">
+  bar.innerHTML = [null, ...usedCats].map(c => `
+    <button class="filter-chip${activeFilter === c ? ' active' : ''}" data-filter="${c === null ? '' : c}">
       ${c === null ? '全部' : c}
     </button>
   `).join('');
@@ -773,7 +1008,6 @@ function renderFilterBar() {
 function renderHabits() {
   const container = document.getElementById('habit-list');
   container.innerHTML = '';
-
   let habits = appData.habits;
   if (activeFilter) habits = habits.filter(h => (h.category || '生活') === activeFilter);
 
@@ -785,7 +1019,6 @@ function renderHabits() {
     return;
   }
 
-  // 按分类分组
   const groups = {};
   habits.forEach(h => {
     const cat = h.category || '生活';
@@ -793,22 +1026,21 @@ function renderHabits() {
     groups[cat].push(h);
   });
 
-  const rec   = appData.records[todayStr()] || {};
-  const notes = appData.notes[todayStr()]   || {};
+  const today = todayStr();
+  const rec   = appData.records[today] || {};
+  const notes = appData.notes[today]   || {};
 
   Object.entries(groups).forEach(([cat, list]) => {
     const done  = list.filter(h => rec[h.id]).length;
-    const total = list.length;
     const groupEl = document.createElement('div');
     groupEl.className = 'category-group';
     groupEl.dataset.cat = cat;
-
     groupEl.innerHTML = `
-      <div class="category-header" data-cat="${cat}">
+      <div class="category-header" data-cat="${escapeHtml(cat)}">
         <div class="category-header-left">
           <span class="category-arrow">▼</span>
           <span class="category-name">${escapeHtml(cat)}</span>
-          <span class="category-count">${done}/${total}</span>
+          <span class="category-count">${done}/${list.length}</span>
         </div>
       </div>
       <div class="category-body" id="catbody-${escapeHtml(cat)}"></div>
@@ -817,18 +1049,21 @@ function renderHabits() {
 
     const body = document.getElementById('catbody-' + escapeHtml(cat));
     list.forEach(h => {
-      const isDone   = !!rec[h.id];
-      const note     = notes[h.id] || '';
-      const hasNote  = note.length > 0 || h.type === 'expense';
+      const isDone    = !!rec[h.id];
+      const note      = notes[h.id] || '';
       const isExpense = h.type === 'expense';
+      const isReading = h.type === 'reading';
+      const readLog   = (appData.readingLogs[today] || {})[h.id] || null;
+      const hasNote   = note.length > 0 || isExpense || (isReading && !!readLog);
 
       const card = document.createElement('div');
       card.className = 'habit-card' + (isDone ? ' done' : '');
       card.dataset.id = h.id;
 
       let noteAreaHtml = '';
+
       if (isExpense) {
-        const expVal = appData.expenses[todayStr()] || '';
+        const expVal  = appData.expenses[today] || '';
         const monthly = getMonthlyExpense();
         noteAreaHtml = `
           <div class="habit-note-area${isDone ? ' open' : ''}" data-note-area="${h.id}">
@@ -842,6 +1077,54 @@ function renderHabits() {
             <div class="expense-monthly">本月累计支出：<span>¥${monthly.toFixed(2)}</span></div>
             <button class="note-save-btn" data-action="save-note" data-id="${h.id}">保存</button>
           </div>`;
+
+      } else if (isReading) {
+        const existingBook       = readLog ? escapeHtml(readLog.book || '') : '';
+        const existingPages      = readLog ? (readLog.pages || '') : '';
+        const bookKey            = readLog ? (readLog.book || '') : '';
+        const existingTotalPages = bookKey && appData.readingBooks[bookKey]
+          ? (appData.readingBooks[bookKey].totalPages || '') : '';
+
+        let progressHtml = '';
+        if (bookKey && existingTotalPages) {
+          let totalRead = 0;
+          Object.values(appData.readingLogs).forEach(dayLogs => {
+            if (dayLogs[h.id] && dayLogs[h.id].book === bookKey)
+              totalRead += dayLogs[h.id].pages || 0;
+          });
+          const pct = Math.min(100, Math.round(totalRead / existingTotalPages * 100));
+          progressHtml = `<div class="reading-progress">
+            <div class="reading-progress-text">第 ${totalRead} 页 / 共 ${existingTotalPages} 页</div>
+            <div class="reading-bar-bg"><div class="reading-bar-fill" style="width:${pct}%"></div></div>
+            <span class="reading-pct">${pct}%</span>
+          </div>`;
+        }
+
+        const booklistOptions = Object.keys(appData.readingBooks)
+          .map(b => `<option value="${escapeHtml(b)}">`).join('');
+
+        noteAreaHtml = `
+          <div class="habit-note-area${isDone ? ' open' : ''}" data-note-area="${h.id}">
+            <div class="note-label">今日阅读</div>
+            <div class="reading-row">
+              <input list="bl-${h.id}" class="book-input" type="text"
+                     data-book-input="${h.id}" placeholder="书名…" value="${existingBook}" />
+              <datalist id="bl-${h.id}">${booklistOptions}</datalist>
+              <input type="number" class="pages-today-input" data-pages-input="${h.id}"
+                     min="0" placeholder="今日页数" value="${existingPages}" />
+            </div>
+            <div class="reading-total-row">
+              <label class="reading-total-label">总页数：</label>
+              <input type="number" class="total-pages-input" data-total-pages-input="${h.id}"
+                     min="1" placeholder="（可选，用于进度）" value="${existingTotalPages}" />
+            </div>
+            ${progressHtml}
+            <div class="note-label" style="margin-top:8px">读书笔记（可选）</div>
+            <textarea class="note-textarea" data-note-input="${h.id}"
+              placeholder="记录感悟、金句…">${escapeHtml(note)}</textarea>
+            <button class="note-save-btn" data-action="save-note" data-id="${h.id}">保存</button>
+          </div>`;
+
       } else {
         noteAreaHtml = `
           <div class="habit-note-area" data-note-area="${h.id}">
@@ -861,7 +1144,7 @@ function renderHabits() {
           ${h.streak > 0 ? `<span class="habit-streak">🔥${h.streak}天</span>` : ''}
           <button class="habit-note-btn${hasNote ? ' has-note' : ''}"
                   data-action="note" data-id="${h.id}" title="备忘">
-            ✏️<span class="note-dot"></span>
+            ${isReading ? '📚' : '✏️'}<span class="note-dot"></span>
           </button>
           <button class="habit-delete" data-action="delete" data-id="${h.id}" title="删除">×</button>
         </div>
@@ -885,7 +1168,7 @@ function checkAllDone() {
 
 function render() {
   renderDate();
-  renderProgress();
+  renderProgressRing();
   renderFilterBar();
   renderHabits();
   renderCatSelect();
@@ -893,7 +1176,7 @@ function render() {
 }
 
 // ═══════════════════════════════════════════════
-// 渲染：分类下拉
+// Category Select
 // ═══════════════════════════════════════════════
 function renderCatSelect() {
   const sel = document.getElementById('cat-select');
@@ -901,20 +1184,31 @@ function renderCatSelect() {
   sel.innerHTML = appData.categories.map(c =>
     `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
   ).join('') + `<option value="__new__">+ 新建分类</option>`;
-  // restore selection
   if ([...sel.options].find(o => o.value === cur)) sel.value = cur;
 }
 
 // ═══════════════════════════════════════════════
-// 习惯操作
+// Habit Operations
 // ═══════════════════════════════════════════════
 function toggleHabit(id) {
+  const checkEl = document.querySelector(`[data-action="check"][data-id="${id}"]`);
   const today = todayStr();
   if (!appData.records[today]) appData.records[today] = {};
-  appData.records[today][id] = !appData.records[today][id];
+  const wasChecked = !!appData.records[today][id];
+  appData.records[today][id] = !wasChecked;
   if (!appData.records[today][id]) delete appData.records[today][id];
   saveData(appData);
+
+  if (!wasChecked && checkEl) fireCheckParticles(checkEl);
   render();
+
+  if (!wasChecked) {
+    const newCheckEl = document.querySelector(`[data-action="check"][data-id="${id}"]`);
+    if (newCheckEl) {
+      newCheckEl.classList.add('bounce');
+      setTimeout(() => newCheckEl.classList.remove('bounce'), 400);
+    }
+  }
 }
 
 function addHabit(name, category, type) {
@@ -922,16 +1216,22 @@ function addHabit(name, category, type) {
   if (!name) return;
   category = category || '生活';
   type     = type || 'normal';
+  if (type === 'expense' && !appData.expenseBudget) {
+    const b = prompt('设置本月预算（元），填 0 跳过：');
+    const v = parseFloat(b);
+    if (!isNaN(v) && v > 0) { appData.expenseBudget = v; }
+  }
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  appData.habits.push({ id, name, streak: 0, category, type });
+  appData.habits.push({ id, name, streak: 0, bestStreak: 0, category, type });
   saveData(appData);
   render();
 }
 
 function deleteHabit(id) {
   appData.habits = appData.habits.filter(h => h.id !== id);
-  Object.values(appData.records).forEach(r => delete r[id]);
-  Object.values(appData.notes).forEach(r   => delete r[id]);
+  Object.values(appData.records).forEach(r    => delete r[id]);
+  Object.values(appData.notes).forEach(r      => delete r[id]);
+  Object.values(appData.readingLogs).forEach(r => delete r[id]);
   saveData(appData);
   render();
 }
@@ -945,7 +1245,7 @@ function saveNote(id) {
   if (text) appData.notes[today][id] = text;
   else delete appData.notes[today][id];
 
-  // expense
+  // Expense
   const expInput = document.querySelector(`[data-expense-input="${id}"]`);
   if (expInput) {
     const val = parseFloat(expInput.value);
@@ -953,8 +1253,29 @@ function saveNote(id) {
     else delete appData.expenses[today];
   }
 
+  // Reading
+  const bookInput       = document.querySelector(`[data-book-input="${id}"]`);
+  const pagesInput      = document.querySelector(`[data-pages-input="${id}"]`);
+  const totalPagesInput = document.querySelector(`[data-total-pages-input="${id}"]`);
+  if (bookInput && pagesInput) {
+    const book  = bookInput.value.trim();
+    const pages = parseInt(pagesInput.value) || 0;
+    if (book && pages > 0) {
+      if (!appData.readingLogs[today]) appData.readingLogs[today] = {};
+      appData.readingLogs[today][id] = { book, pages };
+      if (totalPagesInput) {
+        const tp = parseInt(totalPagesInput.value) || 0;
+        if (tp > 0) {
+          if (!appData.readingBooks[book]) appData.readingBooks[book] = {};
+          appData.readingBooks[book].totalPages = tp;
+        }
+      }
+    }
+  }
+
   saveData(appData);
   render();
+  showToast('已保存 ✓');
 }
 
 function toggleNoteArea(id) {
@@ -962,19 +1283,18 @@ function toggleNoteArea(id) {
   if (area) area.classList.toggle('open');
 }
 
-function getMonthlyExpense() {
-  const prefix = todayStr().slice(0, 7); // "2026-03"
+function getMonthlyExpense(prefix) {
+  prefix = prefix || todayStr().slice(0, 7);
   return Object.entries(appData.expenses)
     .filter(([k]) => k.startsWith(prefix))
     .reduce((s, [, v]) => s + (parseFloat(v) || 0), 0);
 }
 
 // ═══════════════════════════════════════════════
-// 渲染：模版库
+// Templates
 // ═══════════════════════════════════════════════
 function renderTemplates(type) {
-  const gridId = `tpl-grid-${type}`;
-  const grid   = document.getElementById(gridId);
+  const grid = document.getElementById(`tpl-grid-${type}`);
   grid.innerHTML = '';
   TEMPLATES[type].forEach(tpl => {
     const card = document.createElement('div');
@@ -990,21 +1310,17 @@ function renderTemplates(type) {
   });
 }
 
-let tplCurrentData = null; // 当前打开的模版
-
+let tplCurrentData = null;
 function openTplPanel(tpl) {
   tplCurrentData = tpl;
   document.getElementById('tpl-panel-title').textContent = `${tpl.emoji} ${tpl.name}`;
   document.getElementById('tpl-panel-meta').textContent  = `${tpl.days} · ${tpl.desc}`;
-
-  const list = document.getElementById('tpl-habit-list');
-  list.innerHTML = tpl.habits.map((h, i) => `
+  document.getElementById('tpl-habit-list').innerHTML = tpl.habits.map((h, i) => `
     <div class="tpl-habit-item selected" data-idx="${i}">
       <div class="tpl-cb"><span class="tpl-cb-icon">✓</span></div>
-      <span class="tpl-habit-name">${escapeHtml(h.name)}${h.type === 'expense' ? ' 💰' : ''}</span>
+      <span class="tpl-habit-name">${escapeHtml(h.name)}${h.type === 'expense' ? ' 💰' : h.type === 'reading' ? ' 📚' : ''}</span>
     </div>
   `).join('');
-
   updateImportBtn();
   document.getElementById('tpl-overlay').classList.add('open');
 }
@@ -1013,50 +1329,171 @@ function updateImportBtn() {
   const selected = document.querySelectorAll('.tpl-habit-item.selected').length;
   document.getElementById('tpl-import-btn').textContent = `导入选中 (${selected}条)`;
   const allCount = tplCurrentData ? tplCurrentData.habits.length : 0;
-  document.getElementById('tpl-toggle-all').textContent =
-    selected === allCount ? '取消全选' : '全选';
+  document.getElementById('tpl-toggle-all').textContent = selected === allCount ? '取消全选' : '全选';
 }
 
 function importSelected() {
   if (!tplCurrentData) return;
-  const items = document.querySelectorAll('.tpl-habit-item.selected');
   let imported = 0;
-  items.forEach(item => {
-    const idx  = parseInt(item.dataset.idx);
-    const tplH = tplCurrentData.habits[idx];
+  document.querySelectorAll('.tpl-habit-item.selected').forEach(item => {
+    const tplH = tplCurrentData.habits[parseInt(item.dataset.idx)];
     const cat  = tplCurrentData.category || '生活';
-    // 确保分类存在
     if (!appData.categories.includes(cat)) appData.categories.push(cat);
-    // 跳过同名已存在的习惯
     if (!appData.habits.find(h => h.name === tplH.name)) {
-      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + imported;
-      appData.habits.push({ id, name: tplH.name, streak: 0, category: cat, type: tplH.type || 'normal' });
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6) + imported;
+      appData.habits.push({ id, name: tplH.name, streak: 0, bestStreak: 0, category: cat, type: tplH.type || 'normal' });
       imported++;
     }
   });
+  // Prompt budget if expense habit imported
+  if (imported > 0 && appData.habits.some(h => h.type === 'expense') && !appData.expenseBudget) {
+    const b = prompt('检测到记账习惯，设置本月预算（元），填 0 跳过：');
+    const v = parseFloat(b);
+    if (!isNaN(v) && v > 0) appData.expenseBudget = v;
+  }
   saveData(appData);
   document.getElementById('tpl-overlay').classList.remove('open');
-  // 切换到今日
   switchTab('today');
   render();
-  // 小提示
-  if (imported > 0) showToast(`已导入 ${imported} 个习惯 ✅`);
-  else showToast('所选习惯已存在，未重复导入');
+  showToast(imported > 0 ? `已导入 ${imported} 个习惯 ✅` : '所选习惯已存在，未重复导入');
 }
 
 // ═══════════════════════════════════════════════
-// 渲染：我的
+// Render: My Page
 // ═══════════════════════════════════════════════
 function renderMine() {
-  const total      = appData.habits.length;
-  const bestStreak = appData.habits.reduce((m, h) => Math.max(m, h.streak||0), 0);
-  const days       = Object.keys(appData.records).length;
+  const total    = appData.habits.length;
+  const todayRec = appData.records[todayStr()] || {};
+  const currentStreak = appData.habits.reduce((m, h) => {
+    return Math.max(m, todayRec[h.id] ? (h.streak || 0) + 1 : (h.streak || 0));
+  }, 0);
+  const bestStreak = appData.habits.reduce((m, h) => Math.max(m, h.bestStreak || h.streak || 0), 0);
+  const days = Object.values(appData.records).filter(r => Object.keys(r).length > 0).length;
+
   document.getElementById('stats-row').innerHTML = `
     <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">习惯数量</div></div>
-    <div class="stat-card"><div class="stat-value">${bestStreak}</div><div class="stat-label">最长连续天</div></div>
+    <div class="stat-card"><div class="stat-value">${Math.max(bestStreak, currentStreak)}</div><div class="stat-label">最长连续天</div></div>
     <div class="stat-card"><div class="stat-value">${days}</div><div class="stat-label">有记录天数</div></div>
   `;
+
+  renderStreakCard(currentStreak, bestStreak);
+  renderCompletionChart();
   renderCalendar();
+  renderReadingSummary();
+  renderExpenseSummary();
+  updateThemeBtn();
+}
+
+function renderStreakCard(currentStreak, bestStreak) {
+  const container = document.getElementById('streak-container');
+  if (!container) return;
+  if (appData.habits.length === 0) {
+    container.innerHTML = '<div class="section-empty">添加习惯后开始记录 ✨</div>';
+    return;
+  }
+  const allTimeBest = Math.max(bestStreak, currentStreak, 1);
+  const bestPct   = 100;
+  const currPct   = Math.min(100, Math.round(currentStreak / allTimeBest * 100));
+  const isNewRecord = currentStreak > 0 && currentStreak >= bestStreak && bestStreak > 0;
+
+  container.innerHTML = `
+    <div class="streak-card-body">
+      <div class="streak-col">
+        <div class="streak-label">🏆 历史最长</div>
+        <div class="streak-value">${allTimeBest}<span class="streak-unit">天</span></div>
+        <div class="streak-bar-bg"><div class="streak-bar-fill" style="width:${bestPct}%"></div></div>
+      </div>
+      <div class="streak-divider"></div>
+      <div class="streak-col${isNewRecord ? ' new-record' : ''}">
+        <div class="streak-label">🔥 当前连续</div>
+        <div class="streak-value">${currentStreak}<span class="streak-unit">天</span></div>
+        <div class="streak-bar-bg"><div class="streak-bar-fill current" style="width:${currPct}%"></div></div>
+        ${isNewRecord ? '<div class="new-record-badge">🎉 新纪录！</div>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderCompletionChart() {
+  const container = document.getElementById('chart-container');
+  if (!container) return;
+  const total = appData.habits.length;
+  if (total === 0) {
+    container.innerHTML = '<div class="section-empty">添加习惯后开始记录趋势 📊</div>';
+    return;
+  }
+
+  const today     = new Date();
+  const todayKey  = dateStr(today);
+  const dow       = today.getDay();
+  const monday    = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+
+  const thisWeekDates = Array.from({length: 7}, (_, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i); return dateStr(d);
+  });
+  const lastWeekDates = thisWeekDates.map(d => {
+    const dt = new Date(d + 'T00:00:00'); dt.setDate(dt.getDate() - 7); return dateStr(dt);
+  });
+
+  function getRate(dateKey) {
+    if (dateKey > todayKey) return null;
+    const rec  = appData.records[dateKey] || {};
+    const done = appData.habits.filter(h => rec[h.id]).length;
+    return done / total;
+  }
+
+  const tw = thisWeekDates.map(getRate);
+  const lw = lastWeekDates.map(getRate);
+
+  const W = 300, H = 110, pL = 30, pR = 10, pT = 10, pB = 30;
+  const cW = W - pL - pR, cH = H - pT - pB;
+  const xs = cW / 6;
+  const xp = i => pL + i * xs;
+  const yp = r => pT + (1 - r) * cH;
+
+  function polyline(rates) {
+    return rates.map((r, i) => r !== null ? `${xp(i).toFixed(1)},${yp(r).toFixed(1)}` : null)
+      .filter(Boolean).join(' ');
+  }
+  function dots(rates, color) {
+    return rates.map((r, i) => r !== null
+      ? `<circle cx="${xp(i).toFixed(1)}" cy="${yp(r).toFixed(1)}" r="3.5" fill="${color}"/>`
+      : '').join('');
+  }
+
+  const labels = ['一','二','三','四','五','六','日'];
+  const gridLines = [0, 0.5, 1].map(r =>
+    `<line x1="${pL}" y1="${yp(r).toFixed(1)}" x2="${W-pR}" y2="${yp(r).toFixed(1)}"
+           stroke="var(--border)" stroke-width="1"/>`
+  ).join('');
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible;display:block">
+    ${gridLines}
+    <polyline points="${polyline(lw)}" fill="none" stroke="var(--sub)" stroke-width="2"
+              stroke-dasharray="5 3" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots(lw, 'var(--sub)')}
+    <polyline points="${polyline(tw)}" fill="none" stroke="var(--primary)" stroke-width="2.5"
+              stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots(tw, 'var(--primary)')}
+    ${labels.map((l, i) =>
+      `<text x="${xp(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="10" fill="var(--sub)">周${l}</text>`
+    ).join('')}
+    ${[0, 50, 100].map(v =>
+      `<text x="${pL-4}" y="${yp(v/100)+4}" text-anchor="end" font-size="9" fill="var(--sub)">${v}%</text>`
+    ).join('')}
+  </svg>`;
+
+  const legend = `<div class="chart-legend">
+    <span class="legend-item">
+      <svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--primary)" stroke-width="2.5"/><circle cx="11" cy="5" r="3" fill="var(--primary)"/></svg>本周
+    </span>
+    <span class="legend-item">
+      <svg width="22" height="10"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--sub)" stroke-width="2" stroke-dasharray="5 3"/><circle cx="11" cy="5" r="3" fill="var(--sub)"/></svg>上周
+    </span>
+  </div>`;
+
+  container.innerHTML = svg + legend;
 }
 
 function renderCalendar() {
@@ -1085,9 +1522,7 @@ function renderCalendar() {
           const rate = done / total;
           cell.classList.add(rate >= 1 ? 'rate-full' : rate >= .5 ? 'rate-mid' : 'rate-low');
         }
-      } else {
-        cell.style.opacity = '0'; cell.style.pointerEvents = 'none';
-      }
+      } else { cell.style.opacity = '0'; cell.style.pointerEvents = 'none'; }
       if (key === todayKey) cell.classList.add('today-cell');
       week.appendChild(cell);
       cur.setDate(cur.getDate() + 1);
@@ -1096,29 +1531,179 @@ function renderCalendar() {
   }
 }
 
+function renderReadingSummary() {
+  const section = document.getElementById('reading-summary-section');
+  if (!section) return;
+  const hasReading = appData.habits.some(h => h.type === 'reading');
+  if (!hasReading) { section.innerHTML = ''; return; }
+
+  const prefix = todayStr().slice(0, 7);
+  const bookPages = {};
+  Object.entries(appData.readingLogs).forEach(([date, dayLogs]) => {
+    if (!date.startsWith(prefix)) return;
+    Object.values(dayLogs).forEach(log => {
+      if (log && log.book) bookPages[log.book] = (bookPages[log.book] || 0) + (log.pages || 0);
+    });
+  });
+
+  const bookList   = Object.entries(bookPages);
+  const totalPages = bookList.reduce((s, [, p]) => s + p, 0);
+
+  let inner = '';
+  if (bookList.length === 0) {
+    inner = `<div class="section-empty">本月还没有阅读记录，快去打卡吧 📖</div>`;
+  } else {
+    inner = `<div class="reading-stats-row">
+      <span>共读 <b>${bookList.length}</b> 本书</span>
+      <span>累计 <b>${totalPages}</b> 页</span>
+    </div>`;
+    bookList.forEach(([book, pages]) => {
+      const tp  = (appData.readingBooks[book] || {}).totalPages || 0;
+      const pct = tp > 0 ? Math.min(100, Math.round(pages / tp * 100)) : 0;
+      inner += `<div class="book-progress-item">
+        <div class="book-progress-header">
+          <span class="book-name">📖 ${escapeHtml(book)}</span>
+          <span class="book-pages">${pages}页${tp ? ` / ${tp}页` : ''}</span>
+        </div>
+        ${tp > 0 ? `<div class="reading-bar-bg"><div class="reading-bar-fill" style="width:${pct}%"></div></div>` : ''}
+      </div>`;
+    });
+  }
+
+  section.innerHTML = `<div class="my-section-card">
+    <div class="my-section-title">📚 本月阅读</div>
+    ${inner}
+  </div>`;
+}
+
+function renderExpenseSummary() {
+  const section = document.getElementById('expense-summary-section');
+  if (!section) return;
+  const hasExpense = appData.habits.some(h => h.type === 'expense');
+  if (!hasExpense) { section.innerHTML = ''; return; }
+
+  const prefix    = todayStr().slice(0, 7);
+  const spent     = getMonthlyExpense(prefix);
+  const budget    = appData.expenseBudget || 0;
+  const pct       = budget > 0 ? Math.min(100, Math.round(spent / budget * 100)) : 0;
+  const over      = budget > 0 && spent > budget;
+  const remaining = budget - spent;
+  const recordDays = Object.keys(appData.expenses).filter(k => k.startsWith(prefix)).length;
+
+  const barHtml = budget > 0 ? `
+    <div class="expense-bar-bg">
+      <div class="expense-bar-fill${over ? ' over' : ''}" style="width:${pct}%"></div>
+    </div>
+    <div class="expense-detail-row">
+      <span>${over ? `⚠️ 已超支 ¥${Math.abs(remaining).toFixed(0)}` : `还剩 ¥${remaining.toFixed(0)}`}</span>
+      <span>已记录 ${recordDays} 天</span>
+    </div>` : `<div class="expense-detail-row"><span>已记录 ${recordDays} 天</span></div>`;
+
+  section.innerHTML = `<div class="my-section-card">
+    <div class="my-section-title">💰 本月记账</div>
+    <div class="expense-summary-inner">
+      <div class="expense-amount-row">
+        <span class="expense-spent">¥${spent.toFixed(0)}</span>
+        <span class="expense-budget-label">${budget > 0 ? ` / ¥${budget.toFixed(0)} 预算` : ' 本月支出'}</span>
+      </div>
+      ${barHtml}
+      <button class="budget-btn" onclick="promptBudget()">${budget > 0 ? '修改预算' : '设置预算'}</button>
+    </div>
+  </div>`;
+}
+
+function promptBudget() {
+  const cur   = appData.expenseBudget || '';
+  const input = prompt(`请输入本月预算（元）：`, cur);
+  if (input === null) return;
+  const val = parseFloat(input);
+  if (!isNaN(val) && val >= 0) {
+    appData.expenseBudget = val;
+    saveData(appData);
+    renderExpenseSummary();
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Monthly Summary
+// ═══════════════════════════════════════════════
+function buildMonthlySummary(yearMonth) {
+  const monthRecords = Object.entries(appData.records).filter(([d]) => d.startsWith(yearMonth));
+  let totalCheckIns = 0;
+  const completedDays = new Set();
+  monthRecords.forEach(([date, rec]) => {
+    const done = Object.values(rec).filter(Boolean).length;
+    totalCheckIns += done;
+    if (done > 0) completedDays.add(date);
+  });
+  const avgPerDay = completedDays.size > 0 ? (totalCheckIns / completedDays.size).toFixed(1) : '0.0';
+  const maxStreak = appData.habits.reduce((m, h) => Math.max(m, h.bestStreak || 0), 0);
+
+  const bookPages = {};
+  Object.entries(appData.readingLogs || {}).forEach(([date, dl]) => {
+    if (!date.startsWith(yearMonth)) return;
+    Object.values(dl).forEach(log => {
+      if (log && log.book) bookPages[log.book] = (bookPages[log.book] || 0) + (log.pages || 0);
+    });
+  });
+  const readingBooks = Object.keys(bookPages).length;
+  const readingPages = Object.values(bookPages).reduce((s, p) => s + p, 0);
+  const monthSpent   = getMonthlyExpense(yearMonth);
+  const hasReading   = appData.habits.some(h => h.type === 'reading') && readingPages > 0;
+  const hasExpense   = appData.habits.some(h => h.type === 'expense') && monthSpent > 0;
+
+  return { yearMonth, totalCheckIns, completedDays: completedDays.size, avgPerDay, maxStreak,
+           readingBooks, readingPages, monthSpent, hasReading, hasExpense };
+}
+
+function showMonthlySummary(yearMonth) {
+  const s  = buildMonthlySummary(yearMonth);
+  const [y, m] = yearMonth.split('-');
+  document.getElementById('summary-body').innerHTML = `
+    <div class="summary-gradient-card">
+      <div class="summary-month-title">📅 ${y}年${parseInt(m)}月 · 月度总结</div>
+      <div class="summary-items">
+        <div class="summary-item">✅ 累计打卡 <b>${s.totalCheckIns}</b> 次</div>
+        <div class="summary-item">📆 共 <b>${s.completedDays}</b> 天有记录，平均每天 <b>${s.avgPerDay}</b> 次</div>
+        <div class="summary-item">🔥 最长连续 <b>${s.maxStreak}</b> 天</div>
+        ${s.hasReading ? `<div class="summary-item">📚 阅读 <b>${s.readingBooks}</b> 本，累计 <b>${s.readingPages}</b> 页</div>` : ''}
+        ${s.hasExpense ? `<div class="summary-item">💰 本月支出 <b>¥${s.monthSpent.toFixed(0)}</b>${appData.expenseBudget ? ` / ¥${appData.expenseBudget} 预算` : ''}</div>` : ''}
+      </div>
+    </div>
+  `;
+  document.getElementById('summary-overlay').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════
+// Day Detail
+// ═══════════════════════════════════════════════
 function openDayDetail(dateKey) {
-  const rec   = appData.records[dateKey] || {};
-  const notes = appData.notes[dateKey]   || {};
+  const rec   = appData.records[dateKey]  || {};
+  const notes = appData.notes[dateKey]    || {};
+  const rLogs = appData.readingLogs[dateKey] || {};
   const d     = new Date(dateKey + 'T00:00:00');
   const days  = ['日','一','二','三','四','五','六'];
   document.getElementById('day-detail-title').textContent =
     `${d.getMonth()+1}月${d.getDate()}日 星期${days[d.getDay()]}`;
   const body = document.getElementById('day-detail-body');
   if (appData.habits.length === 0) {
-    body.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px">暂无习惯数据</div>';
+    body.innerHTML = '<div style="color:var(--sub);text-align:center;padding:20px">暂无习惯数据</div>';
   } else {
     body.innerHTML = appData.habits.map(h => {
-      const done = !!rec[h.id];
-      const note = notes[h.id] || '';
-      const exp  = h.type === 'expense' && appData.expenses[dateKey]
+      const done   = !!rec[h.id];
+      const note   = notes[h.id] || '';
+      const rLog   = rLogs[h.id];
+      const expStr = h.type === 'expense' && appData.expenses[dateKey]
         ? `💰 支出 ¥${parseFloat(appData.expenses[dateKey]).toFixed(2)}` : '';
+      const readStr = rLog ? `📖 ${escapeHtml(rLog.book)} · ${rLog.pages}页` : '';
       return `<div class="day-detail-item">
         <div class="day-detail-row">
           <span>${done ? '✅' : '⬜'}</span>
           <span class="day-detail-name">${escapeHtml(h.name)}</span>
         </div>
-        ${note ? `<div class="day-detail-note">📝 ${escapeHtml(note)}</div>` : ''}
-        ${exp   ? `<div class="day-detail-note">${exp}</div>` : ''}
+        ${note    ? `<div class="day-detail-note">📝 ${escapeHtml(note)}</div>` : ''}
+        ${expStr  ? `<div class="day-detail-note">${expStr}</div>` : ''}
+        ${readStr ? `<div class="day-detail-note">${readStr}</div>` : ''}
       </div>`;
     }).join('');
   }
@@ -1126,7 +1711,7 @@ function openDayDetail(dateKey) {
 }
 
 // ═══════════════════════════════════════════════
-// Toast 提示
+// Toast & Confetti & Particles
 // ═══════════════════════════════════════════════
 function showToast(msg) {
   let t = document.getElementById('toast');
@@ -1144,9 +1729,6 @@ function showToast(msg) {
   t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2000);
 }
 
-// ═══════════════════════════════════════════════
-// 撒花
-// ═══════════════════════════════════════════════
 function fireConfetti() {
   const wrapper = document.getElementById('confetti-wrapper');
   wrapper.innerHTML = '';
@@ -1154,7 +1736,7 @@ function fireConfetti() {
   for (let i = 0; i < 60; i++) {
     const el = document.createElement('div');
     el.className = 'confetti-piece';
-    el.style.left       = Math.random() * 100 + 'vw';
+    el.style.left = Math.random() * 100 + 'vw';
     el.style.background = colors[Math.floor(Math.random() * colors.length)];
     const s = (8 + Math.random() * 6) + 'px';
     el.style.width = s; el.style.height = s;
@@ -1166,82 +1748,71 @@ function fireConfetti() {
   setTimeout(() => { wrapper.innerHTML = ''; }, 3500);
 }
 
+function fireCheckParticles(el) {
+  const rect   = el.getBoundingClientRect();
+  const cx     = rect.left + rect.width  / 2;
+  const cy     = rect.top  + rect.height / 2;
+  const colors = ['#6C63FF','#a78bfa','#f97316','#22c55e','#facc15','#ec4899'];
+  const wrapper = document.getElementById('confetti-wrapper');
+  for (let i = 0; i < 8; i++) {
+    const p     = document.createElement('div');
+    p.className = 'check-particle';
+    const angle = (i / 8) * Math.PI * 2;
+    const dist  = 28 + Math.random() * 18;
+    p.style.left       = cx + 'px';
+    p.style.top        = cy + 'px';
+    p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    wrapper.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+
 // ═══════════════════════════════════════════════
-// Tab 切换
+// Theme
+// ═══════════════════════════════════════════════
+function toggleTheme() {
+  const html    = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const sysIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  let next;
+  if (!current) { next = sysIsDark ? 'light' : 'dark'; }
+  else if (current === 'dark')  { next = 'light'; }
+  else { next = null; }
+
+  if (next) {
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('themeOverride', next);
+  } else {
+    html.removeAttribute('data-theme');
+    localStorage.removeItem('themeOverride');
+  }
+  updateThemeBtn();
+}
+
+function updateThemeBtn() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const theme   = document.documentElement.getAttribute('data-theme');
+  const sysIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark  = theme === 'dark' || (!theme && sysIsDark);
+  btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+// ═══════════════════════════════════════════════
+// Tab Switch
 // ═══════════════════════════════════════════════
 function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === tab);
-  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   ['today','templates','mine'].forEach(t => {
     document.getElementById('page-' + t).classList.toggle('active', t === tab);
   });
 }
 
 // ═══════════════════════════════════════════════
-// 事件绑定
+// Category helpers
 // ═══════════════════════════════════════════════
-
-// 主 Tab
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
-    switchTab(tab);
-    if (tab === 'mine')      renderMine();
-    if (tab === 'templates') { renderTemplates('challenge'); renderTemplates('scene'); }
-  });
-});
-
-// 子 Tab（模版库）
-document.querySelectorAll('.sub-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const sub = btn.dataset.sub;
-    document.getElementById('tpl-grid-challenge').style.display = sub === 'challenge' ? '' : 'none';
-    document.getElementById('tpl-grid-scene').style.display     = sub === 'scene'     ? '' : 'none';
-  });
-});
-
-// 习惯列表事件委托
-document.getElementById('habit-list').addEventListener('click', e => {
-  const el = e.target.closest('[data-action]');
-  if (!el) return;
-  const { action, id } = el.dataset;
-  if      (action === 'check')     toggleHabit(id);
-  else if (action === 'delete')    deleteHabit(id);
-  else if (action === 'note')      toggleNoteArea(id);
-  else if (action === 'save-note') saveNote(id);
-});
-
-// 分类筛选
-document.getElementById('filter-bar').addEventListener('click', e => {
-  const chip = e.target.closest('.filter-chip');
-  if (!chip) return;
-  activeFilter = chip.dataset.filter || null;
-  render();
-});
-
-// 添加习惯
-document.getElementById('add-btn').addEventListener('click', () => {
-  const inp = document.getElementById('habit-input');
-  const sel = document.getElementById('cat-select');
-  if (sel.value === '__new__') { createNewCategory(sel); return; }
-  addHabit(inp.value, sel.value);
-  inp.value = '';
-  inp.focus();
-});
-document.getElementById('habit-input').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  const sel = document.getElementById('cat-select');
-  if (sel.value === '__new__') { createNewCategory(sel); return; }
-  addHabit(e.target.value, sel.value);
-  e.target.value = '';
-});
-document.getElementById('cat-select').addEventListener('change', function() {
-  if (this.value === '__new__') createNewCategory(this);
-});
-
 function createNewCategory(sel) {
   const name = prompt('请输入新分类名称：');
   if (!name || !name.trim()) { sel.value = appData.categories[0] || '生活'; return; }
@@ -1254,26 +1825,92 @@ function createNewCategory(sel) {
   document.getElementById('cat-select').value = trimmed;
 }
 
-// 模版弹窗：习惯选择
+// ═══════════════════════════════════════════════
+// Event Listeners
+// ═══════════════════════════════════════════════
+
+// Main tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    switchTab(tab);
+    if (tab === 'mine')      renderMine();
+    if (tab === 'templates') { renderTemplates('challenge'); renderTemplates('scene'); }
+  });
+});
+
+// Sub tabs
+document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const sub = btn.dataset.sub;
+    document.getElementById('tpl-grid-challenge').style.display = sub === 'challenge' ? '' : 'none';
+    document.getElementById('tpl-grid-scene').style.display     = sub === 'scene'     ? '' : 'none';
+  });
+});
+
+// Habit list delegation
+document.getElementById('habit-list').addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const { action, id } = el.dataset;
+  if      (action === 'check')     toggleHabit(id);
+  else if (action === 'delete')    { if (confirm('确认删除这个习惯？')) deleteHabit(id); }
+  else if (action === 'note')      toggleNoteArea(id);
+  else if (action === 'save-note') saveNote(id);
+});
+
+// Category header collapse
+document.getElementById('habit-list').addEventListener('click', e => {
+  const hdr = e.target.closest('.category-header');
+  if (!hdr) return;
+  hdr.closest('.category-group').classList.toggle('collapsed');
+});
+
+// Filter bar
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (!chip) return;
+  activeFilter = chip.dataset.filter || null;
+  render();
+});
+
+// Add habit
+document.getElementById('add-btn').addEventListener('click', () => {
+  const inp = document.getElementById('habit-input');
+  const sel = document.getElementById('cat-select');
+  const typ = document.getElementById('type-select');
+  if (sel.value === '__new__') { createNewCategory(sel); return; }
+  addHabit(inp.value, sel.value, typ.value);
+  inp.value = ''; inp.focus();
+});
+document.getElementById('habit-input').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const sel = document.getElementById('cat-select');
+  const typ = document.getElementById('type-select');
+  if (sel.value === '__new__') { createNewCategory(sel); return; }
+  addHabit(e.target.value, sel.value, typ.value);
+  e.target.value = '';
+});
+document.getElementById('cat-select').addEventListener('change', function() {
+  if (this.value === '__new__') createNewCategory(this);
+});
+
+// Template modal
 document.getElementById('tpl-habit-list').addEventListener('click', e => {
   const item = e.target.closest('.tpl-habit-item');
   if (!item) return;
   item.classList.toggle('selected');
   updateImportBtn();
 });
-
-// 全选/取消
 document.getElementById('tpl-toggle-all').addEventListener('click', () => {
-  const items   = document.querySelectorAll('.tpl-habit-item');
-  const allSel  = document.querySelectorAll('.tpl-habit-item.selected').length === items.length;
+  const items  = document.querySelectorAll('.tpl-habit-item');
+  const allSel = document.querySelectorAll('.tpl-habit-item.selected').length === items.length;
   items.forEach(item => item.classList.toggle('selected', !allSel));
   updateImportBtn();
 });
-
-// 导入
 document.getElementById('tpl-import-btn').addEventListener('click', importSelected);
-
-// 关闭模版弹窗
 document.getElementById('tpl-close-btn').addEventListener('click', () => {
   document.getElementById('tpl-overlay').classList.remove('open');
 });
@@ -1281,13 +1918,13 @@ document.getElementById('tpl-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) document.getElementById('tpl-overlay').classList.remove('open');
 });
 
-// 日历点击
+// Calendar click
 document.getElementById('calendar-container').addEventListener('click', e => {
   const cell = e.target.closest('.cal-day');
   if (cell && cell.dataset.date) openDayDetail(cell.dataset.date);
 });
 
-// 关闭日详情
+// Day detail close
 document.getElementById('day-detail-close').addEventListener('click', () => {
   document.getElementById('day-detail-overlay').classList.remove('open');
 });
@@ -1295,10 +1932,28 @@ document.getElementById('day-detail-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) document.getElementById('day-detail-overlay').classList.remove('open');
 });
 
+// Summary modal close
+document.getElementById('summary-close-btn').addEventListener('click', () => {
+  document.getElementById('summary-overlay').classList.remove('open');
+});
+document.getElementById('summary-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) document.getElementById('summary-overlay').classList.remove('open');
+});
+
 // ═══════════════════════════════════════════════
-// 初始化
+// Init
 // ═══════════════════════════════════════════════
 render();
+updateThemeBtn();
+
+// Show pending monthly summary (on month change)
+if (appData.pendingSummaryMonth) {
+  const monthToShow = appData.pendingSummaryMonth;
+  delete appData.pendingSummaryMonth;
+  appData.lastSummaryMonth = monthToShow;
+  saveData(appData);
+  setTimeout(() => showMonthlySummary(monthToShow), 800);
+}
 </script>
 </body>
 </html>
